@@ -200,6 +200,9 @@ void VDO_KNLSysInfoSetup(KNL_ROLE tVDO_KNLRole);
 #ifdef BUC_CU
 void VDO_UpdateDisplayParameter(void);
 void VDO_SwitchDisplayType(KNL_DISP_TYPE tVDO_DisplayType, KNL_ROLE *pVDO_CamRole);
+#if defined(BUC_CU) && defined(RTC676x)
+void VDO_RefreshCamResolution(uint8_t ubStaNum);
+#endif
 void VDO_RemoveDataPath(KNL_ROLE tVDO_CamRole);
 void VDO_SetStreamSlotNum(uint8_t ubSlotNum);
 void VDO_SetFrameColor(uint8_t ubRed, uint8_t ubGreen, uint8_t ubBlue);

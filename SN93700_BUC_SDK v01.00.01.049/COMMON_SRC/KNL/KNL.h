@@ -251,7 +251,8 @@ typedef enum
 										//1->Sub-Video
 										//2->Aux-Video
 										//3->Audio
-										//4->Command	
+										//4->Command
+										//5->alg
 	PKT_INFO_OFS_ROLE 		= (1+2),	//[3]
 	PKT_INFO_OFS_SRCNUM 	= (2+2),	//[4]
 	PKT_INFO_OFS_TOTAL_IDX	= (3+2),	//[5]Rolling Code

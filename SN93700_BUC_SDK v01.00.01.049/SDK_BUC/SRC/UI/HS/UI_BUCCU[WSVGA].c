@@ -31,6 +31,9 @@
 #include "PLY_API.h"
 #include "REC_API.h"
 #include "RTC676x_API.h"
+#ifdef RTC676x
+#include "RTC676x_CTRL.h"
+#endif
 
 #define osUI_SIGNALS	0x66
 
@@ -869,6 +872,9 @@ void UI_StateReset(void)
 		printd(DBG_ErrorLvl, "TWC_HEAT_CTRL Setting 2-way command fail!\n");
 	if(tTWC_RegTransCbFunc(TWC_TX_TYPE, NULL, UI_RecvTxType) != TWC_SUCCESS)
 		printd(DBG_ErrorLvl, "Register TWC_TX_TYPE TWC Fail !\n");
+#ifdef RTC676x
+	RTC676x_Hdw24gInit();
+#endif
 	if(tTWC_RegTransCbFunc(TWC_TX_VERSION, NULL, UI_RecvTxVersion) != TWC_SUCCESS)
 		printd(DBG_ErrorLvl, "Register TWC_TX_VERSION TWC Fail !\n");
 	if(tTWC_RegTransCbFunc(TWC_PELCO, NULL, PELCO_RecvPacket) != TWC_SUCCESS)
@@ -2068,6 +2074,10 @@ void UI_UpdateStatus(uint16_t *pThreadCnt)
 	APP_EventMsg_t tUI_GetLinkStsMsg = {0};
 	uint8_t ubUI_SendMsg2AppFlag = FALSE;
 	UI_PwrCtrl();
+#ifdef RTC676x
+	// 复用200ms周期处理版本触发的一次本通道分辨率刷新，并打印算法结果。
+	RTC676x_Hdw24gPoll();
+#endif
 	osSemaphoreWait(osUI_CuUiCtr, osWaitForever);
 	if(((tUI_State == UI_DISPLAY_STATE || tUI_State == UI_MAINMENU_STATE || tUI_State == UI_SET_VOLUME_STATE) || \
 		(tUI_MenuItem.ubItemIdx == ZOOM_ITEM && tUI_State == UI_SUBMENU_STATE)) && ubUI_CuPowerDiscFlag == FALSE)
@@ -3656,6 +3666,15 @@ void UI_RecvCamHeatingStatusReport(TWC_TAG tRecv_StaNum, uint8_t *pTwc_Data)
 //------------------------------------------------------------------------------
 void UI_RecvTxVersion (TWC_TAG tRecv_StaNum, uint8_t *pData)
 {
+#ifdef RTC676x
+	// 保留原配对 ID 补齐机型；本次 TX 版本以 24G- 开头才允许算法包。
+	uint8_t ubAlgEnable = pData[0] >= sizeof("24G-") && pData[0] <= 31 &&
+		!pData[pData[0]] && !memcmp(pData + 1, "24G-", sizeof("24G-") - 1);
+	if(ubAlgEnable || PAIR_IsHdw24gCam((PAIR_TAG)tRecv_StaNum) ||
+		(pData[0] >= sizeof("HDW24G-") && pData[0] <= 31 && !pData[pData[0]] &&
+		 !memcmp(pData + 1, "HDW24G-", sizeof("HDW24G-") - 1)))
+		PAIR_SyncHdw24gCaps((PAIR_TAG)tRecv_StaNum, ubAlgEnable);
+#endif
 	memcpy(tUI_CamStatus[(UI_CamNum_t)tRecv_StaNum].cCamVersion,pData + 1, *pData);
 	UI_GetZoomVersionDateFromString((UI_CamNum_t)tRecv_StaNum, tUI_CamStatus[(UI_CamNum_t)tRecv_StaNum].cCamVersion);
 	

@@ -129,6 +129,13 @@ void update_id(void);
 static void load_id(void);
 void RTC676x_DelId(uint8_t ubStaNum);
 
+#if OP_AP
+// 配对机型保存在 Flash；RAM 缓存算法结果及待刷新通道。
+void RTC676x_Hdw24gInit(void);
+void RTC676x_Hdw24gPoll(void);
+uint16_t RTC676x_GetHdw24gResult(uint8_t ubStaNum, uint8_t *pData, uint16_t uwSize);
+#endif
+
 void RTC676x_TestPutUartString(char *cmd);
 void RTC676x_TestInit(void);
 

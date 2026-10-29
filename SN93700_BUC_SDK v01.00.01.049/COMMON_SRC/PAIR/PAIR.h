@@ -33,6 +33,10 @@
 #define PAIR_SIGN				0x5105046
 #define PAIR_INVALID_ID			0xFBFAFCFE
 #define PAIR_PRODUCT_ID			0xA5
+// HDW24G 配对标识为 24/47；PAP 能力位 bit0 表示 RX 支持独立算法包。
+#define PAIR_HDW24G_SIGN0		0x24
+#define PAIR_HDW24G_SIGN1		0x47
+#define PAIR_HDW24G_ALG_PACKET	0x01
 
 typedef enum
 {
@@ -97,6 +101,11 @@ typedef struct
 typedef struct
 {
 	uint8_t						ubTxNumber;
+#ifdef RTC676x
+	// 复用原结构体偏移 1~3 的对齐空隙，保持 ID 偏移、配对报文和 Flash 布局不变。
+	uint8_t						ubHdwSign[2];	//!< PAP 为 24/47，Flash 为 47/24
+	uint8_t						ubHdwFlags;	//!< PAP 为 RX 能力位，Flash 为各 CAM 的机型掩码
+#endif
 	uint32_t					ulAp_ID;
     uint32_t					ulSTA_ID[4];
 }PAIR_RAP_Hdr, PAIR_ID_TABLE;
@@ -162,6 +171,12 @@ PAIR_TAG PAIR_GetStaNumber(void);
 */
 void PAIR_DeleteTxId(PAIR_TAG tStaNum);
 void PAIR_SetDevInvaildId(PAIR_TAG tTag);
+// 按配对槽查询已确认的机型，不依赖软件版本号。
+uint8_t PAIR_IsHdw24gCam(PAIR_TAG tStaNum);
+#if OP_AP && defined(RTC676x)
+// 升级后保留旧 ID 时，按在线版本补齐机型和 RX 能力；不重新配对。
+void PAIR_SyncHdw24gCaps(PAIR_TAG tStaNum, uint8_t ubAlgEnable);
+#endif
 
 void PAIR_LoadId(void);
 void PAIR_SaveId(void);

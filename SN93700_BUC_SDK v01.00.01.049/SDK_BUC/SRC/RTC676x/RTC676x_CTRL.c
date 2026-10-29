@@ -24,6 +24,9 @@
 #include "APP_HS.h"
 #include "BUF.h"
 #include "RTC676x_CTRL.h"
+#if OP_AP
+#include "VDO.h"
+#endif
 #include "rwrf.h"
 #include "PAIR.h"
 #include "cmd.h"
@@ -620,6 +623,164 @@ void RTC676x_CmdThread(void const *arg)
 	}
 }
 
+#if OP_AP
+#define HDW24G_MAX_OBJECTS 20
+#define HDW24G_RESULT_SIZE (18 + HDW24G_MAX_OBJECTS * 10)
+// 机型保存在配对 Flash；RAM 仅记录变化，用于刷新本通道和缓存算法结果。
+typedef struct
+{
+	uint32_t ulId;
+	uint8_t ubCamType;
+	uint16_t uwResultLen;
+	uint32_t ulResultTick, ulPrintSeq;
+	uint8_t ubPrintValid, ubPrintCount;
+	uint8_t ubResult[HDW24G_RESULT_SIZE];
+}RTC676x_Hdw24gState_t;
+static RTC676x_Hdw24gState_t tRTC676x_Hdw24g[4];
+static osMutexId osRTC676x_Hdw24gMutex;
+
+static uint32_t RTC676x_Hdw24gGet32(const uint8_t *pData)
+{
+	return (uint32_t)pData[0] | ((uint32_t)pData[1] << 8) |
+		((uint32_t)pData[2] << 16) | ((uint32_t)pData[3] << 24);
+}
+void RTC676x_Hdw24gInit(void)
+{
+	osMutexDef(RTC676x_Hdw24gMutex);
+	osRTC676x_Hdw24gMutex = osMutexCreate(osMutex(RTC676x_Hdw24gMutex));
+}
+uint16_t RTC676x_GetHdw24gResult(uint8_t ubStaNum, uint8_t *pData, uint16_t uwSize)
+{
+	uint16_t uwLen = 0;
+	if(ubStaNum > 3 || !osRTC676x_Hdw24gMutex)
+		return 0;
+	osMutexWait(osRTC676x_Hdw24gMutex, osWaitForever);
+	if(tRTC676x_Hdw24g[ubStaNum].ulId == ulKNL_GetSlaveId(ubStaNum) &&
+		(uint32_t)(osKernelSysTick() - tRTC676x_Hdw24g[ubStaNum].ulResultTick) <= osKernelSysTickFrequency)
+		uwLen = tRTC676x_Hdw24g[ubStaNum].uwResultLen;
+	if(uwLen > uwSize)
+		uwLen = 0;
+	if(uwLen)
+		memcpy(pData, tRTC676x_Hdw24g[ubStaNum].ubResult, uwLen);
+	osMutexRelease(osRTC676x_Hdw24gMutex);
+	return uwLen;
+}
+void RTC676x_Hdw24gPoll(void)
+{
+	RTC676x_Hdw24gState_t *pState;
+	uint8_t ubSta, ubCamType, ubRefresh, ubPrint, ubResult[HDW24G_RESULT_SIZE];
+	uint16_t uwLen, uwIdx;
+	uint32_t ulId, ulTick = osKernelSysTick(), ulSeq;
+	if(!osRTC676x_Hdw24gMutex || ubKNL_GetStopTrxFlg())
+		return;
+	for(ubSta = 0; ubSta < 4; ubSta++)
+	{
+		ulId = ulKNL_GetSlaveId(ubSta);
+		ubCamType = PAIR_IsHdw24gCam((PAIR_TAG)ubSta);
+		ubPrint = ubRefresh = FALSE;
+		osMutexWait(osRTC676x_Hdw24gMutex, osWaitForever);
+		pState = &tRTC676x_Hdw24g[ubSta];
+		if(pState->ulId != ulId || pState->ubCamType != ubCamType)
+		{
+			// 配对、删除或升级补齐机型后，仅刷新一次对应通道。
+			memset(pState, 0, sizeof(*pState));
+			pState->ulId = ulId;
+			pState->ubCamType = ubCamType;
+			ubRefresh = TRUE;
+		}
+		if(!ulId || ulId == 0xFFFFFFFF || ulId == PAIR_INVALID_ID || !rf_get_link_status(ulId))
+		{
+			// 离线只清算法缓存，持久机型和通道能力继续保留。
+			pState->uwResultLen = 0;
+			pState->ubPrintValid = FALSE;
+		}
+		uwLen = pState->uwResultLen;
+		if(uwLen && (uint32_t)(ulTick - pState->ulResultTick) > osKernelSysTickFrequency)
+			pState->uwResultLen = uwLen = 0;
+		if(uwLen)
+		{
+			ulSeq = RTC676x_Hdw24gGet32(pState->ubResult + 8);
+			if(!pState->ubPrintValid || pState->ulPrintSeq != ulSeq || pState->ubPrintCount != pState->ubResult[5])
+			{
+				memcpy(ubResult, pState->ubResult, uwLen);
+				pState->ulPrintSeq = ulSeq;
+				pState->ubPrintCount = ubResult[5];
+				pState->ubPrintValid = ubPrint = TRUE;
+			}
+		}
+		osMutexRelease(osRTC676x_Hdw24gMutex);
+		if(ubRefresh)
+			VDO_RefreshCamResolution(ubSta);
+		// 打印放在周期线程，RF 线程只校验和缓存，避免逐框日志阻塞视频收包。
+		if(ubPrint)
+		{
+			printf("[HDW24G][ALG] cam=%u id=%08X seq=%u count=%u base=%ux%u\r\n",
+				ubSta + 1, ulId, ulSeq, ubResult[5],
+				(uint16_t)ubResult[12] | ((uint16_t)ubResult[13] << 8),
+				(uint16_t)ubResult[14] | ((uint16_t)ubResult[15] << 8));
+			for(uwIdx = 16; uwIdx < uwLen - 2; uwIdx += 10)
+				printf("[HDW24G][BOX] type=%u x=%u y=%u w=%u h=%u\r\n", ubResult[uwIdx],
+					(uint16_t)ubResult[uwIdx + 2] | ((uint16_t)ubResult[uwIdx + 3] << 8),
+					(uint16_t)ubResult[uwIdx + 4] | ((uint16_t)ubResult[uwIdx + 5] << 8),
+					(uint16_t)ubResult[uwIdx + 6] | ((uint16_t)ubResult[uwIdx + 7] << 8),
+					(uint16_t)ubResult[uwIdx + 8] | ((uint16_t)ubResult[uwIdx + 9] << 8));
+		}
+	}
+}
+#endif
+
+#if OP_AP && defined(BSP_D_SNCC71_GM8285C_RX_V2)
+// 与 TX 的 B24G v1 小端布局一致：16 字节头 + 最多 20 个 10 字节目标 + 2 字节校验。
+// 校验后仅更新 RTC676x 的 RAM 缓存，暂不接入 UI/OSD 绘框。
+static void RTC676x_RecvHdw24gResult(uint8_t ubStaNum, const uint8_t *pPkt, uint16_t uwPktLen)
+{
+	const uint8_t *pData = pPkt + PKT_HEADER_SZ;
+	uint16_t uwLen, uwSum = 0, uwIdx;
+	uint16_t uwBaseW, uwBaseH, uwX, uwY, uwW, uwH;
+
+	if(!osRTC676x_Hdw24gMutex || uwPktLen < PKT_HEADER_SZ + 18)
+		return;
+	for(uwIdx = 0; uwIdx < PKT_ACTIVE_HEADER_SZ; uwIdx++)
+		uwSum += pPkt[uwIdx];
+	if(uwSum != ((uint16_t)pPkt[12] | ((uint16_t)pPkt[13] << 8)))
+		return;
+	uwLen = (uint16_t)pData[6] | ((uint16_t)pData[7] << 8);
+	if(memcmp(pData, "B24G", 4) || pData[4] != 1 || pData[5] > HDW24G_MAX_OBJECTS ||
+		uwLen != 18 + pData[5] * 10 || uwLen > uwPktLen - PKT_HEADER_SZ)
+		return;
+	uwSum = 0;
+	for(uwIdx = 0; uwIdx < uwLen - 2; uwIdx++)
+		uwSum += pData[uwIdx];
+	if(uwSum != ((uint16_t)pData[uwLen - 2] | ((uint16_t)pData[uwLen - 1] << 8)))
+		return;
+	uwBaseW = (uint16_t)pData[12] | ((uint16_t)pData[13] << 8);
+	uwBaseH = (uint16_t)pData[14] | ((uint16_t)pData[15] << 8);
+	if(pData[5] && (!uwBaseW || !uwBaseH))
+		return;
+	for(uwIdx = 16; uwIdx < uwLen - 2; uwIdx += 10)
+	{
+		uwX = (uint16_t)pData[uwIdx + 2] | ((uint16_t)pData[uwIdx + 3] << 8);
+		uwY = (uint16_t)pData[uwIdx + 4] | ((uint16_t)pData[uwIdx + 5] << 8);
+		uwW = (uint16_t)pData[uwIdx + 6] | ((uint16_t)pData[uwIdx + 7] << 8);
+		uwH = (uint16_t)pData[uwIdx + 8] | ((uint16_t)pData[uwIdx + 9] << 8);
+		if(uwX >= uwBaseW || uwY >= uwBaseH || !uwW || !uwH ||
+			uwW > uwBaseW - uwX || uwH > uwBaseH - uwY)
+			return;
+	}
+	// 接收线程零等待获取缓存锁；只接收已配对并记录机型的 TX 结果。
+	if(osMutexWait(osRTC676x_Hdw24gMutex, 0) != osOK)
+		return;
+	if(PAIR_IsHdw24gCam((PAIR_TAG)ubStaNum) &&
+		tRTC676x_Hdw24g[ubStaNum].ulId == ulKNL_GetSlaveId(ubStaNum))
+	{
+		memcpy(tRTC676x_Hdw24g[ubStaNum].ubResult, pData, uwLen);
+		tRTC676x_Hdw24g[ubStaNum].uwResultLen = uwLen;
+		tRTC676x_Hdw24g[ubStaNum].ulResultTick = osKernelSysTick();
+	}
+	osMutexRelease(osRTC676x_Hdw24gMutex);
+}
+#endif
+//------------------------------------------------------------------------------
 void RTC676x_VdoThread(void const *arg)
 {
     //uint8_t reset = 1;
@@ -676,6 +837,14 @@ void RTC676x_VdoThread(void const *arg)
 			{
 				if(Id == ulKNL_GetSlaveId(i))
 				{
+					// type 5 为按已保存 RX 能力发送的算法包，必须在旧 CMD 分发/视频重组前单独截取。
+					if(ubBuf[PKT_INFO_OFS_TYPE] == 5)
+					{
+					#ifdef BSP_D_SNCC71_GM8285C_RX_V2
+						RTC676x_RecvHdw24gResult(i, ubBuf, result);
+					#endif
+						break;
+					}
 					switch(i)
 					{
 						case 0:

@@ -516,6 +516,15 @@ void PAIR_LoadId(void)
 #else
 	PAIR_CheckIdTable();
 	#ifdef RTC676x
+	// Flash 使用反向签名 47/24，避免旧 RX 透传保存字节到 PAP 时被 TX 误认算法能力。
+	if((PAIR_IdTable.ubHdwSign[0] != PAIR_HDW24G_SIGN1) ||
+	   (PAIR_IdTable.ubHdwSign[1] != PAIR_HDW24G_SIGN0) ||
+	   (PAIR_IdTable.ubHdwFlags & 0xF0))
+	{
+		PAIR_IdTable.ubHdwSign[0] = PAIR_HDW24G_SIGN1;
+		PAIR_IdTable.ubHdwSign[1] = PAIR_HDW24G_SIGN0;
+		PAIR_IdTable.ubHdwFlags = 0;
+	}
 //	printf("ID Information\r\n");
 //	printf("==========================\r\n");	
 //	printf("DeviceNum:0x%x\r\n",PAIR_IdTable.ubTxNumber);
@@ -583,6 +592,11 @@ void PAIR_DeleteTxId(PAIR_TAG tStaNum)
 //------------------------------------------------------------------------------
 void PAIR_SetDevInvaildId(PAIR_TAG tTag)
 {
+#ifdef RTC676x
+	// 删除配对时同时清除此槽的机型标记，防止下一台 CAM 继承 800x448 限制。
+	if(tTag <= PAIR_STA4)
+		PAIR_IdTable.ubHdwFlags &= ~(1 << tTag);
+#endif
 	switch(tTag)
 	{
 #ifdef S2019A
@@ -616,6 +630,55 @@ void PAIR_SetDevInvaildId(PAIR_TAG tTag)
 #endif
 	}
 }
+//------------------------------------------------------------------------------
+uint8_t PAIR_IsHdw24gCam(PAIR_TAG tStaNum)
+{
+#ifdef RTC676x
+	if((tStaNum <= PAIR_STA4) &&
+	   (PAIR_IdTable.ubHdwSign[0] == PAIR_HDW24G_SIGN1) &&
+	   (PAIR_IdTable.ubHdwSign[1] == PAIR_HDW24G_SIGN0) &&
+	   (PAIR_IdTable.ulSTA_ID[tStaNum] != 0) &&
+	   (PAIR_IdTable.ulSTA_ID[tStaNum] != 0xFFFFFFFF) &&
+	   (PAIR_IdTable.ulSTA_ID[tStaNum] != PAIR_INVALID_ID))
+		return ((PAIR_IdTable.ubHdwFlags & (1 << tStaNum)) != 0);
+#endif
+	return FALSE;
+}
+#if OP_AP && defined(RTC676x)
+void PAIR_SyncHdw24gCaps(PAIR_TAG tStaNum, uint8_t ubAlgEnable)
+{
+	PAIR_RAP_Hdr tPap;
+	TWC_STATUS tTwcSts;
+	uint32_t ulId;
+	// 在线版本只补齐已配对的原槽位，不生成 ID，也不改变配对状态。
+	if(tStaNum > PAIR_STA4 || ubPAIR_InPairIngFlg || ubPAIR_State >= PAIR_START)
+		return;
+	ulId = ulKNL_GetSlaveId(tStaNum);
+	if(!ulId || ulId == 0xFFFFFFFF || ulId == PAIR_INVALID_ID ||
+		ulId != PAIR_IdTable.ulSTA_ID[tStaNum] || !rf_get_link_status(ulId))
+		return;
+	if(!PAIR_IsHdw24gCam(tStaNum))
+	{
+		PAIR_IdTable.ubHdwSign[0] = PAIR_HDW24G_SIGN1;
+		PAIR_IdTable.ubHdwSign[1] = PAIR_HDW24G_SIGN0;
+		PAIR_IdTable.ubHdwFlags |= (1 << tStaNum);
+		PAIR_SaveId();
+	}
+	// 复用 PAP 的原有布局同步能力；只修改副本的能力字段和目标槽号。
+	memcpy(&tPap, &PAIR_IdTable, sizeof(tPap));
+	tPap.ubTxNumber = tStaNum;
+	tPap.ubHdwSign[0] = PAIR_HDW24G_SIGN0;
+	tPap.ubHdwSign[1] = PAIR_HDW24G_SIGN1;
+	tPap.ubHdwFlags = 0;
+#ifdef BSP_D_SNCC71_GM8285C_RX_V2
+	if(ubAlgEnable)
+		tPap.ubHdwFlags = PAIR_HDW24G_ALG_PACKET;
+#endif
+	tTwcSts = tTWC_Send((TWC_TAG)tStaNum, TWC_PAP, (uint8_t *)&tPap, sizeof(tPap), 3);
+	printf("[HDW24G][PAIR-SYNC] cam=%u id=%08X flags=%u %s\r\n",
+		tStaNum + 1, ulId, tPap.ubHdwFlags, tTwcSts == TWC_SUCCESS ? "ok" : "fail");
+}
+#endif
 //------------------------------------------------------------------------------
 uint8_t *PAIR_GetId(PAIR_TAG tPair_StaNum)
 {
@@ -918,12 +981,29 @@ void PAIR_Prp(TWC_TAG GetSta,uint8_t *pData)
 				if(tPAIR_Tag != ubPAIR_Number)
 				{
 					tPAIR_DelStaNum = tPAIR_Tag;
+					// RTC676x 迁移只修改待确认的 PAP，配对失败时保留原通道信息。
+#ifndef RTC676x
 					PAIR_IdTable.ulSTA_ID[tPAIR_Tag] = PAIR_INVALID_ID;
+#endif
 				}
 			}
 		}
 #endif
         PAIR_PreparePap();
+#ifdef RTC676x
+		// PRP 偏移 2/3 为 TX 机型标识；PAP 偏移 1/2 回标识，偏移 3 回 RX 能力。
+		if(tPAIR_DelStaNum <= PAIR_STA4)
+			PAIR_PapPket.ulSTA_ID[tPAIR_DelStaNum] = PAIR_INVALID_ID;
+		PAIR_PapPket.ubHdwSign[0] = 0;
+		PAIR_PapPket.ubHdwSign[1] = 0;
+		PAIR_PapPket.ubHdwFlags = 0;
+		if((pData[2] == PAIR_HDW24G_SIGN0) && (pData[3] == PAIR_HDW24G_SIGN1))
+		{
+			PAIR_PapPket.ubHdwSign[0] = PAIR_HDW24G_SIGN0;
+			PAIR_PapPket.ubHdwSign[1] = PAIR_HDW24G_SIGN1;
+			// 配对阶段只确认机型，算法允许位等本次 TX 版本校验后再通过 PAP 下发。
+		}
+#endif
         ubPAIR_State = PAIR_PAP;
     }
 }
@@ -940,7 +1020,26 @@ void PAIR_Paap(TWC_TAG GetSta,uint8_t *pData)
     {
         if(memcmp(&PAIR_PapPket , pData, sizeof(PAIR_RAP_Hdr))==0)
         {
+#ifdef RTC676x
+			// 仅 PAAP 完整确认后提交：替换或迁移先清旧槽，再记录本次配对的机型。
+			uint8_t ubCamMask = PAIR_IdTable.ubHdwFlags;
+			if((PAIR_IdTable.ubHdwSign[0] != PAIR_HDW24G_SIGN1) ||
+			   (PAIR_IdTable.ubHdwSign[1] != PAIR_HDW24G_SIGN0))
+				ubCamMask = 0;
+			ubCamMask &= ~(1 << ubPAIR_Number);
+			if(tPAIR_DelStaNum <= PAIR_STA4)
+				ubCamMask &= ~(1 << tPAIR_DelStaNum);
+			if((PAIR_PapPket.ubHdwSign[0] == PAIR_HDW24G_SIGN0) &&
+			   (PAIR_PapPket.ubHdwSign[1] == PAIR_HDW24G_SIGN1))
+				ubCamMask |= (1 << ubPAIR_Number);
+#endif
 			memcpy(&PAIR_IdTable, pData, sizeof(PAIR_ID_TABLE));
+#ifdef RTC676x
+			// 转为 Flash 专用签名和每通道掩码，随后沿用原配对结束保存流程。
+			PAIR_IdTable.ubHdwSign[0] = PAIR_HDW24G_SIGN1;
+			PAIR_IdTable.ubHdwSign[1] = PAIR_HDW24G_SIGN0;
+			PAIR_IdTable.ubHdwFlags = ubCamMask;
+#endif
 			
 			#if( defined(T2R) && defined(A7130) && defined(OP_AP))	
 			tPAIR_Info.ulT2RStaTag[ubPAIR_Number] = ulPAIR_BufStaSign[ubPAIR_Number];

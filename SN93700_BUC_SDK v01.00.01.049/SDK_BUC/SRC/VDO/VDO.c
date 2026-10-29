@@ -21,6 +21,9 @@
 
 #include "VDO.h"
 #include "LCD.h"
+#ifdef RTC676x
+#include "PAIR.h"
+#endif
 
 const static VDO_KNLRoleInfo_t tVDO_KNLRoleInfo[] = 
 {
@@ -56,6 +59,95 @@ static uint8_t ubVDO_SysSetupFlag;
 static uint16_t uwVDO_HSIZE;
 static uint16_t uwVDO_VSIZE;
 static VDO_DisplayMode_t tVDO_DisplayMode = VDO_HD_MODE;
+//------------------------------------------------------------------------------
+#ifdef BUC_CU
+// 单画面按配对机型限制尺寸；双画面任一路为 HDW24G 时，两路都用 800x448。
+// 四画面原有 576x320 小于此上限，继续使用原分辨率和 KNL 下发 TX 的链路。
+static void VDO_SetCamResolution(KNL_ROLE tVDO_CamRole, KNL_SRC tVDO_SrcNum, KNL_DISP_TYPE tDispType)
+{
+#ifdef RTC676x
+	uint8_t ubHdw24gCam = PAIR_IsHdw24gCam((PAIR_TAG)tVDO_CamRole);
+	// 使用本次显示类型，切换时 tVDO_Status 仍可能保存上一个画面类型。
+	if((tDispType == KNL_DISP_DUAL_C || tDispType == KNL_DISP_DUAL_U) &&
+		(tVDO_CamRole == tKNL_DualCamRole[0] || tVDO_CamRole == tKNL_DualCamRole[1]) &&
+		(PAIR_IsHdw24gCam((PAIR_TAG)tKNL_DualCamRole[0]) ||
+		 PAIR_IsHdw24gCam((PAIR_TAG)tKNL_DualCamRole[1])))
+		ubHdw24gCam = TRUE;
+	if(!ubVDO_AhdFlag && ubHdw24gCam &&
+	   ((uwVDO_HSIZE > WVGA_WIDTH) || (uwVDO_VSIZE > WVGA_HEIGHT)))
+	{
+		KNL_SetVdoResolution(tVDO_SrcNum, WVGA_WIDTH, WVGA_HEIGHT);
+		KNL_SetFlag4SkipFirstFrame(tVDO_SrcNum, TRUE);
+		return;
+	}
+#endif
+	KNL_SetVdoResolution(tVDO_SrcNum, uwVDO_HSIZE, uwVDO_VSIZE);
+}
+#ifdef RTC676x
+// 配对机型变化时刷新活动源；双画面两路一起核对尺寸，只重建发生变化的源。
+// 不重新设置 RF ID/时隙，分辨率通知仍由 KNL 收帧后按原流程下发。
+void VDO_RefreshCamResolution(uint8_t ubStaNum)
+{
+	KNL_SRC tSrcNum;
+	KNL_ROLE tCamRole;
+	KNL_SrcLocateMap_t tSrcLocate = {0};
+	uint16_t uwOldH, uwOldV;
+	uint8_t ubIdx, ubCount = 1, ubChanged = 0;
+	KNL_DISP_TYPE tDispType = tVDO_Status.tVdoDispType;
+
+	if(ubStaNum > KNL_STA4)
+		return;
+	if((tDispType == KNL_DISP_DUAL_C || tDispType == KNL_DISP_DUAL_U) &&
+		(ubStaNum == tKNL_DualCamRole[0] || ubStaNum == tKNL_DualCamRole[1]))
+	{
+		ubCount = 2;
+		tSrcLocate.ubSetupFlag = TRUE;
+		tSrcLocate.tSrcNum[0] = tVDO_KNLRoleInfo[tKNL_DualCamRole[0]].tVDO_KNLParam[VDO_MAIN_SRC].tKNL_SrcNum;
+		tSrcLocate.tSrcNum[1] = tVDO_KNLRoleInfo[tKNL_DualCamRole[1]].tVDO_KNLParam[VDO_MAIN_SRC].tKNL_SrcNum;
+		tSrcLocate.tSrcLocate[0] = (tDispType == KNL_DISP_DUAL_U)?KNL_DISP_LOCATION1:KNL_DISP_LOCATION2;
+		tSrcLocate.tSrcLocate[1] = (tDispType == KNL_DISP_DUAL_U)?KNL_DISP_LOCATION2:KNL_DISP_LOCATION1;
+	}
+	for(ubIdx = 0; ubIdx < ubCount; ubIdx++)
+	{
+		tCamRole = (ubCount == 2)?tKNL_DualCamRole[ubIdx]:(KNL_ROLE)ubStaNum;
+		tSrcNum = tVDO_KNLRoleInfo[tCamRole].tVDO_KNLParam[VDO_MAIN_SRC].tKNL_SrcNum;
+		uwOldH = uwKNL_GetVdoH(tSrcNum);
+		uwOldV = uwKNL_GetVdoV(tSrcNum);
+		VDO_SetCamResolution(tCamRole, tSrcNum, tDispType);
+		if((uwOldH == uwKNL_GetVdoH(tSrcNum) && uwOldV == uwKNL_GetVdoV(tSrcNum)) ||
+			!ubKNL_ChkVdoFlowAct(tSrcNum))
+			continue;
+		if(tDispType == KNL_DISP_SINGLE)
+		{
+			if(tCamRole != tKNL_SingleCamRole)
+				continue;
+			tSrcLocate.tSrcNum[0] = tSrcNum;
+		}
+		else if(ubCount != 2)
+			continue;
+		KNL_VdoStop(tSrcNum);
+		KNL_VdoPathNodeReset(tSrcNum);
+		VDO_DataPathSetup(tCamRole, VDO_MAIN_SRC);
+		KNL_ImgDecInit((H264_DECODE_INDEX)tVDO_KNLRoleInfo[tCamRole].tVDO_KNLParam[VDO_MAIN_SRC].ubVDO_CodecIdx,
+			uwKNL_GetVdoH(tSrcNum), uwKNL_GetVdoV(tSrcNum));
+		ubChanged |= (1 << ubIdx);
+	}
+	if(!ubChanged)
+		return;
+	tSrcLocate.ubDispBufChgFlag = TRUE;
+	tSrcLocate.ubFixDispChFlag = TRUE;
+	KNL_ModifyDispType(tDispType, tSrcLocate);
+	for(ubIdx = 0; ubIdx < ubCount; ubIdx++)
+	{
+		if(ubChanged & (1 << ubIdx))
+		{
+			tCamRole = (ubCount == 2)?tKNL_DualCamRole[ubIdx]:(KNL_ROLE)ubStaNum;
+			KNL_VdoStart(tVDO_KNLRoleInfo[tCamRole].tVDO_KNLParam[VDO_MAIN_SRC].tKNL_SrcNum);
+		}
+	}
+}
+#endif
+#endif
 //------------------------------------------------------------------------------
 void VDO_Init(void)
 {
@@ -131,7 +223,7 @@ void VDO_Init(void)
 	for(tVDO_KNLRole = KNL_STA1; tVDO_KNLRole < tVDO_TrxSlotNum; tVDO_KNLRole++)
 	{
 		tVDO_KNLMainSrcNum = tVDO_KNLRoleInfo[tVDO_KNLRole].tVDO_KNLParam[VDO_MAIN_SRC].tKNL_SrcNum;
-		KNL_SetVdoResolution(tVDO_KNLMainSrcNum, uwVDO_HSIZE, uwVDO_VSIZE);
+		VDO_SetCamResolution(tVDO_KNLRole, tVDO_KNLMainSrcNum, VDO_DISP_TYPE);
 		tVDO_DecScaleParam = KNL_VDO_SCALE;
 		VDO_DataPathSetup(tVDO_KNLRole, VDO_MAIN_SRC);
 		tVDO_Status.tVdoPlaySte[tVDO_KNLRole] = VDO_STOP;
@@ -366,7 +458,7 @@ void VDO_DataPathResetMode(KNL_DISP_TYPE tVDO_DisplayType, KNL_ROLE *pVDO_CamRol
 			VDO_SetupTrxBwByViewType(tVDO_DisplayType, pVDO_CamRole);
 		#endif
 			KNL_VdoPathReset();
-			KNL_SetVdoResolution(tVDO_KNLSrcNum, uwVDO_HSIZE, uwVDO_VSIZE);
+			VDO_SetCamResolution(tKNL_SingleCamRole, tVDO_KNLSrcNum, tVDO_DisplayType);
 			tVDO_DecScaleParam = KNL_SCALE_X1;
 			VDO_DataPathSetup(tKNL_SingleCamRole, VDO_MAIN_SRC);
 			KNL_ModifyDispType(KNL_DISP_SINGLE, tVDO_KNLSrcLocate);
@@ -403,7 +495,7 @@ void VDO_DataPathResetMode(KNL_DISP_TYPE tVDO_DisplayType, KNL_ROLE *pVDO_CamRol
 			for(ubRoleIdx = 0; ubRoleIdx < 2; ubRoleIdx++)
 			{
 				tVDO_KNLSrcNum = tVDO_KNLRoleInfo[tKNL_DualCamRole[ubRoleIdx]].tVDO_KNLParam[VDO_MAIN_SRC].tKNL_SrcNum;
-				KNL_SetVdoResolution(tVDO_KNLSrcNum, uwVDO_HSIZE, uwVDO_VSIZE);
+				VDO_SetCamResolution(tKNL_DualCamRole[ubRoleIdx], tVDO_KNLSrcNum, tVDO_DisplayType);
 				tVDO_DecScaleParam = KNL_SCALE_X1;
 				VDO_DataPathSetup(tKNL_DualCamRole[ubRoleIdx], VDO_MAIN_SRC);
 			}

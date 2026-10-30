@@ -109,7 +109,7 @@ del .\BIN\temp1.bin
 goto end_merge
 
 :MergeOSD
-.\UTILITY\bin2hex_ext %PROFADDR% .\SYSTEM\Profile\Profile.dat .\BIN\temp1.hex
+.\UTILITY\bin2hex_ext %PROFADDR% ..\Profile.dat .\BIN\temp1.hex
 .\UTILITY\HexMerger .\BIN\FW_SN93700.hex .\BIN\temp1.hex .\BIN\temp2.hex
 .\UTILITY\hex2bin .\BIN\temp2.hex
 IF EXIST .\BIN\FW_SN93700_OSD.bin (
@@ -119,21 +119,26 @@ IF EXIST .\BIN\FW_SN93700_IQ.bin (
 del .\BIN\FW_SN93700_IQ.bin
 )
 del .\BIN\temp1.hex
-copy /b .\BIN\temp2.bin+.\SYSTEM\OSD\OSD_Font_HD_90¢X.pat+.\SYSTEM\OSD\OSD_Image_WSVGA_0¢X.dat .\BIN\temp1.bin
+copy /b .\BIN\temp2.bin+..\OSDImage.dat .\BIN\temp1.bin
 rem copy /b .\BIN\temp2.bin+.\SYSTEM\OSD\OSD_Font_HD_90¢X.pat+.\SYSTEM\OSD\OSD_Image_HD_90¢X.dat .\BIN\temp1.bin
 SET /a LOGOADDR=PROFADDR+12
 .\UTILITY\binConverter -gs .\BIN\temp1 %LOGOADDR%
 SET FILESZ=0
 SET /A FILESZ=%errorlevel%-40960
 .\UTILITY\binModify .\BIN\temp1 %LOGOADDR% %FILESZ%
-copy /b .\BIN\temp1.bin+.\SYSTEM\OSD\OSD_Logo_WSVGA_0¢X.dat .\BIN\FW_SN93700_OSD.bin
+copy /b .\BIN\temp1.bin+..\ImageLogo.dat .\BIN\FW_SN93700_OSD.bin
 rem copy /b .\BIN\temp1.bin+.\SYSTEM\OSD\OSD_Logo_HD_90¢X.dat .\BIN\FW_SN93700_OSD.bin
 .\UTILITY\binConverter -als .\BIN\FW_SN93700_OSD 4096
 del .\BIN\FW_SN93700_OSD.bin
 copy .\BIN\FW_SN93700_OSD_Rep.bin .\BIN\FW_SN93700_OSD.bin /Y
 del .\BIN\FW_SN93700_OSD_Rep.bin
 .\UTILITY\binConverter -gs .\BIN\FW_SN93700_OSD 41156
-.\UTILITY\binModify .\BIN\FW_SN93700_OSD 41156 %errorlevel%
+SET AI_FWSIZE=%errorlevel%
+IF %AI_FWSIZE% GTR 15600000 (
+    echo ERROR: firmware exceeds 15600000 bytes: %AI_FWSIZE%
+    exit /b 1
+)
+.\UTILITY\binModify .\BIN\FW_SN93700_OSD 41156 %AI_FWSIZE%
 .\UTILITY\binModify .\BIN\FW_SN93700_OSD 41160 %6
 del .\BIN\temp1.bin
 del .\BIN\temp2.hex

@@ -169,7 +169,12 @@ void UI_DrawPairingSubMenuPage(void)
 		tOSD_Img2(&tOsdImgInfo[i], OSD_QUEUE);
 
 	//cam1 ~cam4
-	tOSD_GetOsdImgInfor(1, OSD_IMG2, (tUI_CuSetting.tLanguage != LANGUAGE_GERMAN)?OSD2IMG_PAIRCAM1NOR_ICON:OSD2IMG_PAIRCAM1NOR_ICON_GER, 16, &tOsdImgInfo[0]);
+	tOSD_GetOsdImgInfor(1, OSD_IMG2, (tUI_CuSetting.tLanguage != LANGUAGE_GERMAN)?OSD2IMG_PAIRCAM1NOR_ICON:OSD2IMG_PAIRCAM1NOR_ICON_GER, 8, &tOsdImgInfo[0]);
+	for(uint8_t i = 0;i < 8;i++)
+	{
+		tOsdImgInfo[8 + i] = tOsdImgInfo[i];
+		tOsdImgInfo[8 + i].uwYStart = PAIRING_Y + PAIRING_Y_STEP;
+	}
 	for(uint8_t i = 0;i < 8;i++)
 		tOSD_Img2(&tOsdImgInfo[2*i], OSD_QUEUE);
 	//pairing success flag
@@ -305,6 +310,7 @@ void UI_DrawPlaybackSubMenuPage(void)
 	UI_DrawDCIMFolderMenu();
 }
 //------------------------------------------------------------------------------
+
 void UI_DrawSettingSubMenuPage(void)
 {
 	OSD_IMG_INFO tOsdImgInfo[22];
@@ -315,6 +321,7 @@ void UI_DrawSettingSubMenuPage(void)
 	//WORD
 	for(uint8_t i = 0;i < SETTINGITEM_MAX;i++)
 		tOSD_Img2(&tOsdImgInfo[i], OSD_QUEUE);
+
 	
 	tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_CAMERA_SETTING_NOR_ICON, SETTINGITEM_MAX*2, &tOsdImgInfo[0]);
 	for(uint8_t i = 0;i < SETTINGITEM_MAX;i++)
@@ -913,7 +920,14 @@ static void UI_PairingDrawSubMenuItem(void)
 	uint16_t uwFirstItemOsdImg = (tUI_CuSetting.tLanguage != LANGUAGE_GERMAN)?OSD2IMG_PAIRCAM1NOR_ICON:OSD2IMG_PAIRCAM1NOR_ICON_GER;
 	uint8_t ubItemPreIdx = tUI_SubMenuItem[PAIRING_ITEM].tSubMenuInfo.ubItemPreIdx;
 	uint8_t ubItemIdx = tUI_SubMenuItem[PAIRING_ITEM].tSubMenuInfo.ubItemIdx;
-	UI_DrawHLandNormalIcon(uwFirstItemOsdImg + 2*ubItemPreIdx, (uwFirstItemOsdImg + 2*ubItemIdx + UI_ICON_HIGHLIGHT));
+	OSD_IMG_INFO tOsdImgInfo;
+	for(uint8_t i = 0;i < 2;i++)
+	{
+		uint8_t ubItem = (i == 0)?ubItemPreIdx:ubItemIdx;
+		tOSD_GetOsdImgInfor(1, OSD_IMG2, uwFirstItemOsdImg + 2*(ubItem%4) + i, 1, &tOsdImgInfo);
+		tOsdImgInfo.uwYStart = PAIRING_Y + PAIRING_Y_STEP*(ubItem/4);
+		tOSD_Img2(&tOsdImgInfo, (i == 0)?OSD_QUEUE:OSD_UPDATE);
+	}
 
 }
 
@@ -1589,7 +1603,14 @@ static void UI_TriggerSubMenuExecute(void)
 
 	//button
 	
-	tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_TRIGGER_DELAY_CAM1_NOR, 22, &tOsdImgInfo_Button[0]);
+	tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_DATE_TIME_YEAR_NOR, 2, &tOsdImgInfo_Button[0]);
+	for(uint8_t i = 0;i < 10;i++)
+	{
+		tOsdImgInfo_Button[2*i] = tOsdImgInfo_Button[0];
+		tOsdImgInfo_Button[2*i + 1] = tOsdImgInfo_Button[1];
+		tOsdImgInfo_Button[2*i].uwXStart = tOsdImgInfo_Button[2*i + 1].uwXStart = TRIGGER_X + TRIGGER_X_STEP*(i%5);
+		tOsdImgInfo_Button[2*i].uwYStart = tOsdImgInfo_Button[2*i + 1].uwYStart = TRIGGER_Y + TRIGGER_Y_STEP*(i/5);
+	}
 	tOSD_GetOsdImgInfor(1, OSD_IMG2, (tUI_CuSetting.tLanguage == LANGUAGE_ENGLISH)?OSD2IMG_TRIGGER_DISPLAY_SETUP_NOR:
 									(tUI_CuSetting.tLanguage == LANGUAGE_GERMAN)?OSD2IMG_TRIGGER_DISPLAY_SETUP_NOR_GER:
 									(tUI_CuSetting.tLanguage == LANGUAGE_FRENCH)?OSD2IMG_TRIGGER_DISPLAY_SETUP_NOR_FR:OSD2IMG_TRIGGER_DISPLAY_SETUP_NOR_CHN, 2, &tOsdImgInfo_Button[20]);
@@ -1667,7 +1688,14 @@ static void UI_AutoScanSubMenuExecute(void)
 	for(uint8_t i = 0;i < 7;i++)
 		tOSD_Img2(&tOsdImgInfo[i], OSD_QUEUE);
 	//delay
-	tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_AUTOSCAN_DELAY_CAM1_NOR, 12, &tOsdImgInfo[0]);
+	tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_DATE_TIME_YEAR_NOR, 2, &tOsdImgInfo[0]);
+	for(uint8_t i = 0;i < 6;i++)
+	{
+		tOsdImgInfo[2*i] = tOsdImgInfo[0];
+		tOsdImgInfo[2*i + 1] = tOsdImgInfo[1];
+		tOsdImgInfo[2*i].uwXStart = tOsdImgInfo[2*i + 1].uwXStart = AUTOSCAN_DELAY_X + AUTO_SCAN_OFF_DIST_X*(i%2);
+		tOsdImgInfo[2*i].uwYStart = tOsdImgInfo[2*i + 1].uwYStart = AUTOSCAN_DELAY_Y + AUTO_SCAN_OFF_DIST_Y*(i/2);
+	}
 	for(uint8_t i = 0;i < 6;i++)
 		tOSD_Img2(&tOsdImgInfo[2*i], OSD_QUEUE);
 
@@ -1753,7 +1781,17 @@ static void UI_ParkingLineSubMenuExecute(void)
 	for(uint8_t i = 0;i < 4;i++)
 		tOSD_Img2(&tOsdImgInfo[2*i], OSD_QUEUE);
 	//enablr or disable
-	tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_PARKINGLINE_CAM1_DIS_NOR, 24, &tOsdImgInfo[0]);
+	tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_AUTOSCAN_OFF_CAM1_NOR, 4, &tOsdImgInfo[0]);
+	for(uint8_t i = 0;i < 4;i++)
+	{
+		for(uint8_t j = 0;j < 4;j++)
+		{
+			tOsdImgInfo[6*i + j] = tOsdImgInfo[j];
+			tOsdImgInfo[6*i + j].uwXStart = PARKINGLINE_SWITCH_X + PARKINGLINE_X_STEP*(i%2);
+			tOsdImgInfo[6*i + j].uwYStart = PARKINGLINE_SWITCH_Y + PARKINGLINE_Y_STEP*(i/2);
+		}
+		tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_PARKINGLINE_CAM1_AUTO_NOR + 2*i, 2, &tOsdImgInfo[6*i + 4]);
+	}
  
 	for(uint8_t i = 0;i < 4;i++)
 		tOSD_Img2(&tOsdImgInfo[6*i + 2*tUI_CuSetting.tParkingLineEnable[i]], OSD_QUEUE);	
@@ -1791,7 +1829,17 @@ static void UI_GuideLineSubMenuExecute(void)
 	for(uint8_t i = 0;i < 4;i++)
 		tOSD_Img2(&tOsdImgInfo[2*i], OSD_QUEUE);
 	//enablr or disable
-	tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_PARKINGLINE_CAM1_DIS_NOR, 24, &tOsdImgInfo[0]);
+	tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_AUTOSCAN_OFF_CAM1_NOR, 4, &tOsdImgInfo[0]);
+	for(uint8_t i = 0;i < 4;i++)
+	{
+		for(uint8_t j = 0;j < 4;j++)
+		{
+			tOsdImgInfo[6*i + j] = tOsdImgInfo[j];
+			tOsdImgInfo[6*i + j].uwXStart = PARKINGLINE_SWITCH_X + PARKINGLINE_X_STEP*(i%2);
+			tOsdImgInfo[6*i + j].uwYStart = PARKINGLINE_SWITCH_Y + PARKINGLINE_Y_STEP*(i/2);
+		}
+		tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_PARKINGLINE_CAM1_AUTO_NOR + 2*i, 2, &tOsdImgInfo[6*i + 4]);
+	}
 	for(uint8_t i = 0;i < 4;i++)
 		tOSD_Img2(&tOsdImgInfo[6*i + 2*tUI_CuSetting.GuideLineEnable[i]], OSD_QUEUE); 
 	//high light
@@ -1847,6 +1895,10 @@ static void UI_SettingSubMenuExecute(void)
 	{
 		UI_GuideLineSubMenuExecute();
 	}
+	else if(ubSubMenuItemIdx == AI_ITEM)
+	{
+		UI_AISubMenuExecute();
+	}
 	else
 		return;
 }
@@ -1864,6 +1916,7 @@ static void UI_SettingingDrawSubMenuItem(void)
 													OSD2IMG_POWERON_NOR_ICON,
 													OSD2IMG_PARKINGLINE_NOR_ICON,
 													OSD2IMG_GUIDELINE_NOR_ICON,
+													OSD2IMG_AI_NOR_ICON,
 													};
 	uint8_t ubSubMenuItemPreIdx = tUI_SubMenuItem[SETTING_ITEM].tSubMenuInfo.ubItemPreIdx;
 	uint8_t ubSubMenuItemIdx = tUI_SubMenuItem[SETTING_ITEM].tSubMenuInfo.ubItemIdx;
@@ -2493,7 +2546,8 @@ void UI_PairingSubTouchMenu(TOUCH_EVENT_t *Touch_Info)
 				
 			for(i = 0; i < tUI_SubMenuItem[PAIRING_ITEM].ubItemCount;i++)//判断具体点击在哪个图标上
 			{
-				tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_PAIRCAM1NOR_ICON + 2*i, 1, &tOsdImgInfo);	
+				tOSD_GetOsdImgInfor(1, OSD_IMG2, ((tUI_CuSetting.tLanguage != LANGUAGE_GERMAN)?OSD2IMG_PAIRCAM1NOR_ICON:OSD2IMG_PAIRCAM1NOR_ICON_GER) + 2*(i%4), 1, &tOsdImgInfo);
+				tOsdImgInfo.uwYStart = PAIRING_Y + PAIRING_Y_STEP*(i/4);
 				if(Touch_Info->startX > tOsdImgInfo.uwXStart 
 					&& Touch_Info->startX < tOsdImgInfo.uwXStart + tOsdImgInfo.uwHSize
 					&& Touch_Info->startY > tOsdImgInfo.uwYStart 

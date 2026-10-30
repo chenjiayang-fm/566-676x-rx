@@ -996,6 +996,50 @@ OSD_RESULT tOSD_Img1 (OSD_IMG_INFO *pInfor, OSD_UPDATE_TYP tMode)
 	return tFlag;
 }
 //------------------------------------------------------------------------------
+OSD_RESULT tOSD_Img1_NoCopy (OSD_IMG_INFO *pInfor, OSD_UPDATE_TYP tMode)
+{
+	OSD_RESULT tFlag = OSD_LOCA_FAIL;
+
+	osMutexWait(OSD_Mutex, osWaitForever);
+	if (uwOSD_HSize >= pInfor->uwXStart + pInfor->uwHSize && uwOSD_VSize >= pInfor->uwYStart + pInfor->uwVSize)
+	{
+		if (!(OSD_BUF1_PATIMG_MASK & ubOSD_BufFlag))
+		{
+			ubOSD_BufFlag |= OSD_BUF1_PAT_STATE;
+			OSD_SfUpdateData(tOSD_SfAddr.ulOsdImgSfStartAddr + tOSD_PatInfor.ulOsdPatSft,
+			tOSD_BufInfor.ulOsdImg1BufAddr, (tOSD_PatInfor.ubOsdImgPatNum + OSD_PAT_CR_NUM) << 1);
+		}
+		OSD_GetImgData (tOSD_SfAddr.ulOsdImgSfStartAddr, pInfor->ulAddrSft, tOSD_BufInfor.ulOsdImg1BufAddr,
+		pInfor->uwHSize, pInfor->uwVSize, pInfor->uwXStart, pInfor->uwYStart);
+		if (OSD_UPDATE == tMode)
+			OSD_UpdateImg1();
+		else
+			ubOSD_BufFlag = (ubOSD_BufFlag & OSD_BUF_STATE_MASK) | OSD_IMG1_Q;
+		tFlag = OSD_OK;
+	}
+	else
+		printf("[NEW OSD] OSD Location error\n");
+	osMutexRelease(OSD_Mutex);
+	return tFlag;
+}
+//------------------------------------------------------------------------------
+void OSD_UpdateImg1AndImg2(void)
+{
+	osMutexWait(OSD_Mutex, osWaitForever);
+	if(OSD_OK == tOSD_DataCopy(tOSD_BufInfor.ulOsdImg1BufAddr, tOSD_BufInfor.ulOsdImg2BufAddr, ulOSD_BufSize))
+	{
+		uint8_t ubDelayCnt = 5;
+		while(OSD_BUF_EMPTY != pOSD_GetOsdBufInfor()->tBufState)
+		{
+			osDelay(1);
+			if (--ubDelayCnt == 0)
+				break;
+		}
+		OSD_UpdateImg1();
+	}
+	osMutexRelease(OSD_Mutex);
+}
+//------------------------------------------------------------------------------
 OSD_RESULT tOSD_Img2 (OSD_IMG_INFO *pInfor, OSD_UPDATE_TYP tMode)
 {
 	OSD_RESULT tFlag = OSD_LOCA_FAIL;

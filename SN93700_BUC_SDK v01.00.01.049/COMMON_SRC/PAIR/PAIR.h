@@ -175,7 +175,9 @@ void PAIR_SetDevInvaildId(PAIR_TAG tTag);
 uint8_t PAIR_IsHdw24gCam(PAIR_TAG tStaNum);
 #if OP_AP && defined(RTC676x)
 // 升级后保留旧 ID 时，按在线版本补齐机型和 RX 能力；不重新配对。
-void PAIR_SyncHdw24gCaps(PAIR_TAG tStaNum, uint8_t ubAlgEnable);
+void PAIR_SyncHdw24gCaps(PAIR_TAG tStaNum, uint8_t ubAlgEnable, const uint8_t *pCursor);
+void PAIR_Hdw24gConfigPoll(void);
+void PAIR_ClearHdw24gConfig(PAIR_TAG tStaNum);
 #endif
 
 void PAIR_LoadId(void);

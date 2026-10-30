@@ -77,6 +77,9 @@ UI_State_t tUI_State;
 APP_State_t tUI_SyncAppState;
 UI_CamStatus_t tUI_CamStatus[CAM_4T];
 UI_CUSetting_t tUI_CuSetting;
+#ifdef RTC676x
+static uint8_t ubUI_Hdw24gAlgEnable[CAM_4T];
+#endif
 const static UI_MenuFuncPtr_t tUI_StateMap2MenuFunc[UI_STATE_MAX] =
 {
 	[UI_DISPLAY_STATE]				= UI_DisplayArrowKeyFunc,
@@ -205,6 +208,7 @@ UI_SettingSubSubMenuItem_t tSettingSubSubMenuItem =
 	   {0,0, { 0, 0 } },//power on
 	   {PARKINGLINE_CAM1_ONOFF, PARKINGLINE_MAX, { 0, 0 } },//parking line
 	   {PARKINGLINE_CAM1_ONOFF, PARKINGLINE_MAX, { 0, 0 } },//Guide line
+	   {AI_PD_CAM1, AI_MAX, {0,0}},//AI
 	 },
 };
 //------------------------------------------------------------------------------sub sub sub
@@ -354,6 +358,7 @@ uint32_t ulZoomRestartCount;
 uint32_t ubZoomPairingCount = 1000; //ÈáçÊñ∞pairingÂêéÂà∑cameraÊó∂Èó¥ ms
 
 uint8_t ubAutoScanReady = TRUE;
+uint8_t ubDrawBSDRange = TRUE;
 
 UI_CamNum_t TriggerBackUp_View;
 
@@ -939,7 +944,7 @@ void UI_UpdateFwUpgStatus(void *ptUpgStsReport)
 			if(100 == pFWU_StsRpt->ubAPP_Report[0])
 				osDelay(1000);
 			*/
-			printf("pFWU_StsRpt->ubAPP_Report[0] = %d\n",pFWU_StsRpt->ubAPP_Report[0]);
+			//printf("pFWU_StsRpt->ubAPP_Report[0] = %d\n",pFWU_StsRpt->ubAPP_Report[0]);
 			
 			static uint16_t uwOldVal;
 			static OSD_IMG_INFO tOsdImgInfo[3];
@@ -994,7 +999,7 @@ void UI_HandlePreviewStatus(void *ptAppStsReport)
 				if(tUI_CamStatus[uCamNum].ulImageStuckCount == 3)//3Ê¨°Â∏ßÊï∞Ê≤°ÂèòÂ∞±ÁÆóÂç°Âõæ‰∫Ü
 				{
 					LCD_ChDisable(LCD_CH0 + i);
-					printf("---------LCD_ChDisable chn = %d\n",i);
+					//printf("---------LCD_ChDisable chn = %d\n",i);
 				}
 				else if(tUI_CamStatus[uCamNum].ulImageStuckCount == 20)
 				{
@@ -1018,7 +1023,7 @@ void UI_HandlePreviewStatus(void *ptAppStsReport)
 //------------------------------------------------------------------------------
 uint8_t UI_UpdateBSDAndTraceCtrl(UI_CamNum_t tCamNum)
 {
-	printf("\nUI_UpdateBSDAndTraceCtrl!!! !\n");
+	//printf("\nUI_UpdateBSDAndTraceCtrl!!! !\n");
 	uint8_t ubTryCount;
 	ubTryCount = 5;
 	while(--ubTryCount)
@@ -1032,7 +1037,7 @@ uint8_t UI_UpdateBSDAndTraceCtrl(UI_CamNum_t tCamNum)
 }
 uint8_t UI_UpdateLaserAndLedCtrl(UI_CamNum_t tCamNum)
 {
-	printf("UI_UpdateTxImgProc  tCamNum = %d\n",tCamNum);
+	//printf("UI_UpdateTxImgProc  tCamNum = %d\n",tCamNum);
 	UI_CUReqCmd_t tCamSetCmd;
 	tCamSetCmd.tDS_CamNum				= tCamNum;
 	tCamSetCmd.ubCmd[UI_TWC_TYPE]		= UI_SETTING;
@@ -1078,7 +1083,7 @@ void UI_UpdateZOOMCamAndLaserCam(uint8_t ubFirstCall[][2])
 		{
 			if(tUI_CamStatus[(UI_CamNum_t)ubFirstCall[i][1]].tCamConnSts == CAM_ONLINE && tUI_CamStatus[(UI_CamNum_t)ubFirstCall[i][1]].cCamVersion[0] != '\0')
 			{
-				printf("ZOOMCamAndLaserCam ubFirstCall[%d][1] = %d, version = %s\n", i, ubFirstCall[i][1], tUI_CamStatus[(UI_CamNum_t)ubFirstCall[i][1]].cCamVersion);
+				//printf("ZOOMCamAndLaserCam ubFirstCall[%d][1] = %d, version = %s\n", i, ubFirstCall[i][1], tUI_CamStatus[(UI_CamNum_t)ubFirstCall[i][1]].cCamVersion);
 				ubFirstCall[i][0] = 0;
 				if(UI_CheckTxVersion(tUI_CamStatus[(UI_CamNum_t)ubFirstCall[i][1]].cCamVersion,30,zoomchar,3))
 				{	
@@ -1238,9 +1243,9 @@ void UI_UpdateAppStatus(void *ptAppStsReport)
 			}
 			
 			ubUI_FinishViewSwitch = TRUE;
-			printf("uwUI_ViewSwitchTime = %d\n",uwUI_ViewSwitchTime);
+			//printf("uwUI_ViewSwitchTime = %d\n",uwUI_ViewSwitchTime);
 			uwUI_ViewSwitchTime = 0;
-			printf("ubUI_FinishViewSwitch\n");
+			//printf("ubUI_FinishViewSwitch\n");
 			if(!ubUI_CuPowerDiscFlag)
 			{
 				osSemaphoreRelease(osUI_CuTriggerCtr);
@@ -1539,7 +1544,8 @@ void UI_DrawNoSignalIcon(void)
 			ubCamDiscCount[tCamViewSel.tCamViewPool[ubCam]] = 0;
 			if(tCamViewSel.tCamViewType == SINGLE_VIEW)
 			{
-				if(tUI_CuSetting.GuideLineEnable[tCamViewSel.tCamViewPool[0]] || tUI_CuSetting.tParkingLineEnable[tCamViewSel.tCamViewPool[0]] == PARKING_LINE_ON || tUI_CuSetting.tParkingLineEnable[tCamViewSel.tCamViewPool[0]] == PARKING_LINE_AUTO)//ÊúâÂºïÂØºÁ∫ø
+				if(!tUI_CuSetting.ubIsEnableBSDRANGE[tCamViewSel.tCamViewPool[0]] &&
+					(tUI_CuSetting.GuideLineEnable[tCamViewSel.tCamViewPool[0]] || tUI_CuSetting.tParkingLineEnable[tCamViewSel.tCamViewPool[0]] == PARKING_LINE_ON || tUI_CuSetting.tParkingLineEnable[tCamViewSel.tCamViewPool[0]] == PARKING_LINE_AUTO))//ÊúâÂºïÂØºÁ∫ø
 				{
 					OSD_EraserImg2_NoUpdate(&tOsdImgInfo);
 					if(tUI_CuSetting.tParkingLineEnable[tCamViewSel.tCamViewPool[0]] == PARKING_LINE_ON)
@@ -1927,8 +1933,8 @@ void UI_RefreshBandwidth(void)
 	tUI_Message.ubAPP_Message[3] = tCamViewSel.tCamViewPool[1];
 	tUI_Message.ubAPP_Message[4] = tCamViewSel.tCamViewPool[2];
 	tUI_Message.ubAPP_Message[5] = tCamViewSel.tCamViewPool[3];
-	printf("tCamViewSel.tCamViewPool[0] = %d,tCamViewSel.tCamViewPool[1] = %d,tCamViewSel.tCamViewPool[2] = %d,tCamViewSel.tCamViewPool[3] = %d\n",
-		tCamViewSel.tCamViewPool[0],tCamViewSel.tCamViewPool[1],tCamViewSel.tCamViewPool[2],tCamViewSel.tCamViewPool[3]);
+	//printf("tCamViewSel.tCamViewPool[0] = %d,tCamViewSel.tCamViewPool[1] = %d,tCamViewSel.tCamViewPool[2] = %d,tCamViewSel.tCamViewPool[3] = %d\n",
+		//tCamViewSel.tCamViewPool[0],tCamViewSel.tCamViewPool[1],tCamViewSel.tCamViewPool[2],tCamViewSel.tCamViewPool[3]);
 	UI_SendMessageToAPP(&tUI_Message);
 }
 
@@ -1960,7 +1966,7 @@ void UI_RecvTxType (TWC_TAG tRecv_StaNum, uint8_t *pData)
 //------------------------------------------------------------------
 uint8_t UI_UpdateTxImgProc(UI_CamNum_t tCamNum)
 {
-	printf("UI_UpdateTxImgProc  tCamNum = %d\n",tCamNum);
+	//printf("UI_UpdateTxImgProc  tCamNum = %d\n",tCamNum);
 	uint8_t ubValue,ubResult = 0;
 	UI_CUReqCmd_t tCamSetCmd;
 	tCamSetCmd.tDS_CamNum				= tCamNum;
@@ -2075,8 +2081,9 @@ void UI_UpdateStatus(uint16_t *pThreadCnt)
 	uint8_t ubUI_SendMsg2AppFlag = FALSE;
 	UI_PwrCtrl();
 #ifdef RTC676x
-	// ∏¥”√200ms÷‹∆⁄¥¶¿Ì∞Ê±æ¥•∑¢µƒ“ª¥Œ±æÕ®µ¿∑÷±Ê¬ À¢–¬£¨≤¢¥Ú”°À„∑®Ω·π˚°£
+	// ÔøΩÔøΩÔøΩÔøΩ200msÔøΩÔøΩÔøΩ⁄¥ÔøΩÔøΩÔøΩÔøΩÊ±æÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩ“ªÔøΩŒ±ÔøΩÕ®ÔøΩÔøΩÔøΩ÷±ÔøΩÔøΩÔøΩÀ¢ÔøΩ¬£ÔøΩÔøΩÔøΩÔøΩÔøΩ”°ÔøΩ„∑®ÔøΩÔøΩÔøΩÔøΩÔøΩ
 	RTC676x_Hdw24gPoll();
+	PAIR_Hdw24gConfigPoll();
 #endif
 	osSemaphoreWait(osUI_CuUiCtr, osWaitForever);
 	if(((tUI_State == UI_DISPLAY_STATE || tUI_State == UI_MAINMENU_STATE || tUI_State == UI_SET_VOLUME_STATE) || \
@@ -2231,6 +2238,9 @@ void UI_MenuReturnEventExec(void *pvTriggerEvent)
 		UI_EnterAdjustAreaClosePakt(tUI_SubMenuItem[ZOOM_ITEM].tSubMenuInfo.ubItemIdx, TRUE);
 	}
 	
+	if(tUI_MenuItem.ubItemIdx == SETTING_ITEM && tUI_State == UI_SUBSUBSUBMENU_STATE &&
+		tUI_SubMenuItem[SETTING_ITEM].tSubMenuInfo.ubItemIdx == AI_ITEM)
+		UI_SwitchViewType(DeskTopShowView, FALSE);
 	UI_BackToDesktop(TRUE);
 	UI_UpdateDevStatusInfo();
 	ulPanelOffCount = PANELAUTOOFFCOUNT;
@@ -3269,8 +3279,8 @@ void UI_ReportCamConnectionStatus(void *pvConnectionSts)
 			heatingUseLinkStatus[tCamViewSel.tCamViewPool[3]] = (pCamConnSts[tCamViewSel.tCamViewPool[3]] == rLINK)?CAM_ONLINE:CAM_OFFLINE;
 			break;
 		case SCAN_VIEW:
-			printf("pCamConnSts[0]=%d, [1]=%d, [2]=%d, [3]=%d\n", 
-				pCamConnSts[0] == rLINK, pCamConnSts[1] == rLINK, pCamConnSts[2] == rLINK, pCamConnSts[3] == rLINK);
+			//printf("pCamConnSts[0]=%d, [1]=%d, [2]=%d, [3]=%d\n", 
+				//pCamConnSts[0] == rLINK, pCamConnSts[1] == rLINK, pCamConnSts[2] == rLINK, pCamConnSts[3] == rLINK);
 			break;
 		default:
 			break;
@@ -3281,6 +3291,13 @@ void UI_ReportCamConnectionStatus(void *pvConnectionSts)
 		UI_CamConnectStatus_t tOldCamConnSts = tUI_CamStatus[tCamNum].tCamConnSts;
 		
 		tUI_CamStatus[tCamNum].tCamConnSts 	= (pCamConnSts[APP_GetSTANumMappingTable(tCamNum)->tKNL_StaNum] == rLINK)?CAM_ONLINE:CAM_OFFLINE;
+#ifdef RTC676x
+		if(tUI_CamStatus[tCamNum].tCamConnSts == CAM_OFFLINE)
+		{
+			ubUI_Hdw24gAlgEnable[tCamNum] = FALSE;
+			PAIR_ClearHdw24gConfig(APP_GetSTANumMappingTable(tCamNum)->tPAIR_StaNum);
+		}
+#endif
 	
 		if (tUI_CamStatus[tCamNum].tCamConnSts != tOldCamConnSts) 
 		{
@@ -3425,6 +3442,10 @@ void UI_UnBindCam(UI_CamNum_t tUI_DelCam)
 	tUI_CamStatus[tUI_DelCam].ulCAM_ID 	  = INVALID_ID;
 	tUI_CamStatus[tUI_DelCam].tCamConnSts = CAM_OFFLINE;
 	tUI_CamStatus[tUI_DelCam].cCamVersion[0] = '\0';
+#ifdef RTC676x
+	ubUI_Hdw24gAlgEnable[tUI_DelCam] = FALSE;
+	PAIR_ClearHdw24gConfig(APP_GetSTANumMappingTable(tUI_DelCam)->tPAIR_StaNum);
+#endif
 	tUI_CuSetting.ubPairedCamNum -= (tUI_CuSetting.ubPairedCamNum == 0)?0:1;
 	if(tUI_CuSetting.ubisZoomCameraFlag[tUI_DelCam] == 1)
 	{
@@ -3515,7 +3536,7 @@ void UI_DisableCuAdoOnlyMode(void)
 //------------------------------------------------------------------------------
 void UI_MDTrigger(UI_CamNum_t tCamNum, void *pvTrig)
 {
-	printd(DBG_InfoLvl, ("%s: CAM%d\n"), __func__, tCamNum);
+	//printd(DBG_InfoLvl, ("%s: CAM%d\n"), __func__, tCamNum);
 }
 //------------------------------------------------------------------------------
 void UI_VoiceTrigger(UI_CamNum_t tCamNum, void *pvTrig)
@@ -3664,16 +3685,51 @@ void UI_RecvCamHeatingStatusReport(TWC_TAG tRecv_StaNum, uint8_t *pTwc_Data)
 	}
 }
 //------------------------------------------------------------------------------
+#ifdef RTC676x
+static void UI_SendHdw24gCursor(UI_CamNum_t tCamNum, uint8_t ubAlgEnable)
+{
+	uint8_t ubCursor[30] = {0};
+	if(tCamNum >= CAM_4T)
+		return;
+	UI_ParkinglinePoint_t tRange = tUI_CuSetting.tUI_AIDetectlinePoint[tCamNum];
+	UI_LinePoint_t *ptPoint[AI_RANGE_POINT_MAX] = {
+		&tRange.tupLeft, &tRange.tupRight, &tRange.tdownLeft, &tRange.tdownRight
+	};
+	APP_StaNumMap_t *pCamNumMap = APP_GetSTANumMappingTable(tCamNum);
+	ubCursor[0] = tUI_CuSetting.ubIsEnableBSDRANGE[tCamNum];
+	ubCursor[1] = tUI_CuSetting.tLocation1[tCamNum];
+	ubCursor[2] = tUI_CuSetting.tLocation2[tCamNum];
+	ubCursor[3] = AI_RANGE_LINE_STEPS;
+	ubCursor[4] = (uint8_t)OSD_WIDTH;
+	ubCursor[5] = (uint8_t)(OSD_WIDTH >> 8);
+	ubCursor[6] = (uint8_t)OSD_HEIGHT;
+	ubCursor[7] = (uint8_t)(OSD_HEIGHT >> 8);
+	for(uint8_t i = 0;i < AI_RANGE_POINT_MAX;i++)
+	{
+		ubCursor[8 + i*4] = (uint8_t)ptPoint[i]->xPoint;
+		ubCursor[9 + i*4] = (uint8_t)(ptPoint[i]->xPoint >> 8);
+		ubCursor[10 + i*4] = (uint8_t)ptPoint[i]->yPoint;
+		ubCursor[11 + i*4] = (uint8_t)(ptPoint[i]->yPoint >> 8);
+	}
+	PAIR_SyncHdw24gCaps(pCamNumMap->tPAIR_StaNum, ubAlgEnable, ubCursor);
+}
+#endif
 void UI_RecvTxVersion (TWC_TAG tRecv_StaNum, uint8_t *pData)
 {
 #ifdef RTC676x
-	// ±£¡Ù‘≠≈‰∂‘ ID ≤π∆Îª˙–Õ£ª±æ¥Œ TX ∞Ê±æ“‘ 24G- ø™Õ∑≤≈‘ –ÌÀ„∑®∞¸°£
+	// ÔøΩÔøΩÔøΩÔøΩ‘≠ÔøΩÔøΩÔøΩ ID ÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÕ£ÔøΩÔøΩÔøΩÔøΩÔøΩ TX ÔøΩÊ±æÔøΩÔøΩ 24G- ÔøΩÔøΩÕ∑ÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩÔøΩ„∑®ÔøΩÔøΩÔøΩÔøΩ
 	uint8_t ubAlgEnable = pData[0] >= sizeof("24G-") && pData[0] <= 31 &&
 		!pData[pData[0]] && !memcmp(pData + 1, "24G-", sizeof("24G-") - 1);
-	if(ubAlgEnable || PAIR_IsHdw24gCam((PAIR_TAG)tRecv_StaNum) ||
-		(pData[0] >= sizeof("HDW24G-") && pData[0] <= 31 && !pData[pData[0]] &&
-		 !memcmp(pData + 1, "HDW24G-", sizeof("HDW24G-") - 1)))
-		PAIR_SyncHdw24gCaps((PAIR_TAG)tRecv_StaNum, ubAlgEnable);
+	UI_CamNum_t tCamNum;
+	APP_TwcTagMap2CamNum(tRecv_StaNum, tCamNum);
+	if(tCamNum < CAM_4T)
+	{
+		ubUI_Hdw24gAlgEnable[tCamNum] = ubAlgEnable;
+		if(ubAlgEnable || PAIR_IsHdw24gCam(APP_GetSTANumMappingTable(tCamNum)->tPAIR_StaNum) ||
+			(pData[0] >= sizeof("HDW24G-") && pData[0] <= 31 && !pData[pData[0]] &&
+			 !memcmp(pData + 1, "HDW24G-", sizeof("HDW24G-") - 1)))
+			UI_SendHdw24gCursor(tCamNum, ubAlgEnable);
+	}
 #endif
 	memcpy(tUI_CamStatus[(UI_CamNum_t)tRecv_StaNum].cCamVersion,pData + 1, *pData);
 	UI_GetZoomVersionDateFromString((UI_CamNum_t)tRecv_StaNum, tUI_CamStatus[(UI_CamNum_t)tRecv_StaNum].cCamVersion);
@@ -3779,7 +3835,7 @@ void PELCO_RecvPacket(TWC_TAG tRecv_StaNum, uint8_t *pData)
 			{
 				case UI_TRACE_CONFIG:
 				{
-					printf("UI_TRACE_CONFIG\n");
+					//printf("UI_TRACE_CONFIG\n");
 //					printf("BSD = %d\n",uRecvDate[2]);
 //					printf("Trace = %d\n",uRecvDate[3]); //tTWC_Send(TWC_STA1 + DeskTopShowView, TWC_PELCO, (uint8_t *)&CheckSensorStatus[0], 7, 10); //get BSD and Trace status
 					if((tUI_CamStatus[tRecv_StaNum].ubBSD != uRecvDate[2] || tUI_CamStatus[tRecv_StaNum].ubTrace != uRecvDate[3]))
@@ -3801,7 +3857,7 @@ void PELCO_RecvPacket(TWC_TAG tRecv_StaNum, uint8_t *pData)
 				break;
 				case UI_BSD_YELLOW_BOX_DATA:
 				{
-					printf("UI_BSD_YELLOW_BOX_DATA\n");
+					//printf("UI_BSD_YELLOW_BOX_DATA\n");
 //					printf("uRecvDate[2] = 0x%x, [3] = 0x%x, [4] = 0x%x, [5] = 0x%x, [6] = 0x%x, [7] = 0x%x, [8] = 0x%x, [9] = 0x%x, uDataLen = %d\n", uRecvDate[2], uRecvDate[3], uRecvDate[4], uRecvDate[5]\
 //						,uRecvDate[6], uRecvDate[7], uRecvDate[8], uRecvDate[9], uDataLen);
 					x_high = uRecvDate[2];
@@ -3845,7 +3901,7 @@ void PELCO_RecvPacket(TWC_TAG tRecv_StaNum, uint8_t *pData)
 				break;
 				case UI_BSD_RED_BOX_DATA:
 				{
-					printf("UI_BSD_RED_BOX_DATA\n");
+					//printf("UI_BSD_RED_BOX_DATA\n");
 					x_high = uRecvDate[2];
 					x_low = uRecvDate[3];
 					
@@ -3887,7 +3943,7 @@ void PELCO_RecvPacket(TWC_TAG tRecv_StaNum, uint8_t *pData)
 				break;
 				case UI_MIRROR_FLIP_CONFIG:
 				{
-					printf("UI_MIRROR_FLIP_CONFIG\n");
+					//printf("UI_MIRROR_FLIP_CONFIG\n");
 //					printf("UI_MIRROR_FLIP_CONFIG uRecvDate[2] = %d, uRecvDate[3] = %d\n", uRecvDate[2], uRecvDate[3]);
 					//Á¨¨‰∏ÄÊ¨°Êé•Êî∂Âà∞Ê†áÂøó‰ΩçÂàô‰ºöÈáçÁΩÆWT479ÁöÑÁøªËΩ¨
 					if(!tUI_CamStatus[tRecv_StaNum].tZoomCamISP)
@@ -3951,9 +4007,25 @@ uint8_t UI_CheckTxVersion(char *pTxVersion, uint8_t ubTxVersionLen, char *pTxDst
 	return found;
 }
 //------------------------------------------------------------------------------
+static void UI_ResetAIParameter(void)
+{
+	const UI_ParkinglinePoint_t tDefaultPoint = AI_RANGE_DEFAULT_POINT;
+	for(UI_CamNum_t tCamNum = CAM1; tCamNum < CAM_4T; tCamNum++)
+	{
+		tUI_CuSetting.ubDetectPeopleFlag[tCamNum] = TRUE;
+		tUI_CuSetting.ubDetectCarFlag[tCamNum] = TRUE;
+		tUI_CuSetting.ubIsEnableBSDALARM[tCamNum] = TRUE;
+		tUI_CuSetting.ubBSDTriggerOut[tCamNum] = FALSE;
+		tUI_CuSetting.ubIsEnableBSDRANGE[tCamNum] = TRUE;
+		tUI_CuSetting.tUI_AIDetectlinePoint[tCamNum] = tDefaultPoint;
+		tUI_CuSetting.tLocation1[tCamNum] = AI_RANGE_DEFAULT_LINE1;
+		tUI_CuSetting.tLocation2[tCamNum] = AI_RANGE_DEFAULT_LINE2;
+	}
+}
+//------------------------------------------------------------------------------
 void UI_ResetUIParameter(void)
 {
-	printf("---------------------UI_ResetUIParameter--------------------------\n");
+	//printf("---------------------UI_ResetUIParameter--------------------------\n");
 	UI_CamNum_t tCamNum;
 	uint16_t uwTemp;
 	/****************************************tUI_CamStatus*******************************************/
@@ -4157,6 +4229,7 @@ void UI_ResetUIParameter(void)
 	}
 
 	tUI_CuSetting.tLanguage = LANGUAGE_ENGLISH;
+	UI_ResetAIParameter();
 	UI_UpdateDevStatusInfo();
 	
 	// heating
@@ -4353,6 +4426,45 @@ uint8_t UI_CheckUIParameter(void)
 		UI_CHK_MYSYS(tUI_CuSetting.ubisZoomCameraFlag[3],2,0);
 	}
 
+	// AI switches and range coordinates loaded from Flash.
+	for(tCamNum = CAM1; tCamNum < CAM_4T; tCamNum++)
+	{
+		if(tUI_CuSetting.ubDetectPeopleFlag[tCamNum] > TRUE)
+			tUI_CuSetting.ubDetectPeopleFlag[tCamNum] = TRUE;
+		if(tUI_CuSetting.ubDetectCarFlag[tCamNum] > TRUE)
+			tUI_CuSetting.ubDetectCarFlag[tCamNum] = TRUE;
+		if(tUI_CuSetting.ubIsEnableBSDALARM[tCamNum] > TRUE)
+			tUI_CuSetting.ubIsEnableBSDALARM[tCamNum] = TRUE;
+		if(tUI_CuSetting.ubBSDTriggerOut[tCamNum] > TRUE)
+			tUI_CuSetting.ubBSDTriggerOut[tCamNum] = FALSE;
+		if(tUI_CuSetting.ubIsEnableBSDRANGE[tCamNum] > TRUE)
+			tUI_CuSetting.ubIsEnableBSDRANGE[tCamNum] = TRUE;
+		uint8_t ubValid = TRUE;
+		const UI_ParkinglinePoint_t tDefaultPoint = AI_RANGE_DEFAULT_POINT;
+		UI_ParkinglinePoint_t tRange = tUI_CuSetting.tUI_AIDetectlinePoint[tCamNum];
+		UI_LinePoint_t *ptPoint[AI_RANGE_POINT_MAX] = {
+			&tRange.tupLeft, &tRange.tupRight, &tRange.tdownLeft, &tRange.tdownRight
+		};
+		for(uint8_t i = 0;i < AI_RANGE_POINT_MAX;i++)
+		{
+			if(ptPoint[i]->xPoint < 0 || ptPoint[i]->xPoint > OSD_WIDTH - AI_RANGE_MOVE_STEP ||
+				ptPoint[i]->yPoint < 0 || ptPoint[i]->yPoint > OSD_HEIGHT - 4)
+				ubValid = FALSE;
+		}
+		if(ubValid && (tRange.tupLeft.yPoint != tRange.tupRight.yPoint || tRange.tdownLeft.yPoint != tRange.tdownRight.yPoint ||
+			tRange.tdownLeft.yPoint < tRange.tupLeft.yPoint))
+			ubValid = FALSE;
+		if(!ubValid)
+			tUI_CuSetting.tUI_AIDetectlinePoint[tCamNum] = tDefaultPoint;
+		if(tUI_CuSetting.tLocation1[tCamNum] == 0 ||
+			tUI_CuSetting.tLocation1[tCamNum] >= tUI_CuSetting.tLocation2[tCamNum] ||
+			tUI_CuSetting.tLocation2[tCamNum] >= AI_RANGE_LINE_STEPS)
+		{
+			tUI_CuSetting.tLocation1[tCamNum] = AI_RANGE_DEFAULT_LINE1;
+			tUI_CuSetting.tLocation2[tCamNum] = AI_RANGE_DEFAULT_LINE2;
+		}
+	}
+
 	//language
 	UI_CHK_MYSYS(tUI_CuSetting.tLanguage,LANGUAGE_MAX,LANGUAGE_ENGLISH);
 	
@@ -4373,23 +4485,23 @@ void UI_LoadDevStatusInfo(void)
 	SF_Read(ulUI_SFAddr, sizeof(UI_DeviceStatusInfo_t), (uint8_t *)&tUI_DevStsInfo);
 	memcpy(tUI_CamStatus, tUI_DevStsInfo.tCAM_StatusInfo, (CAM_4T * sizeof(UI_CamStatus_t)));
 	memcpy(&tUI_CuSetting, &tUI_DevStsInfo.tCU_SettingInfo, sizeof(UI_CUSetting_t));
-	printd(DBG_InfoLvl, "UI TAG:%s\n",tUI_DevStsInfo.cbUI_DevStsTag);
-	printd(DBG_InfoLvl, "UI VER:%s\n",tUI_DevStsInfo.cbUI_FwVersion);
+	//printd(DBG_InfoLvl, "UI TAG:%s\n",tUI_DevStsInfo.cbUI_DevStsTag);
+	//printd(DBG_InfoLvl, "UI VER:%s\n",tUI_DevStsInfo.cbUI_FwVersion);
 
 	if((strncmp(tUI_DevStsInfo.cbUI_DevStsTag, SF_AP_UI_SECTOR_TAG, sizeof(tUI_DevStsInfo.cbUI_DevStsTag) - 1)) ||
 	   (strncmp(tUI_DevStsInfo.cbUI_FwVersion, SN937XX_FW_VERSION,  sizeof(tUI_DevStsInfo.cbUI_FwVersion) - 1)))
 	{		
-		printf("--------------------------------------------------------------------------------------------\n");
-		printf("-----------------------------------device reset---------------------------------------------\n");
-		printf("--------------------------------------------------------------------------------------------\n");
+		//printf("--------------------------------------------------------------------------------------------\n");
+		//printf("-----------------------------------device reset---------------------------------------------\n");
+		//printf("--------------------------------------------------------------------------------------------\n");
 		/****************************************tUI_CamStatus*******************************************/
 		UI_ResetUIParameter();
 		
 		SF_Read(ulUI_SFAddr, sizeof(UI_DeviceStatusInfo_t), (uint8_t *)&tUI_DevStsInfo);
 		memcpy(tUI_CamStatus, tUI_DevStsInfo.tCAM_StatusInfo, (CAM_4T * sizeof(UI_CamStatus_t)));
 		memcpy(&tUI_CuSetting, &tUI_DevStsInfo.tCU_SettingInfo, sizeof(UI_CUSetting_t));
-		printd(DBG_InfoLvl, "UI TAG:%s\n",tUI_DevStsInfo.cbUI_DevStsTag);
-		printd(DBG_InfoLvl, "UI VER:%s\n",tUI_DevStsInfo.cbUI_FwVersion);
+		//printd(DBG_InfoLvl, "UI TAG:%s\n",tUI_DevStsInfo.cbUI_DevStsTag);
+		//printd(DBG_InfoLvl, "UI VER:%s\n",tUI_DevStsInfo.cbUI_FwVersion);
 	}
 	//Ê£ÄÊü•ÂèÇÊï∞ÊòØÂê¶ÊúâÊïà
 	if(UI_CheckUIParameter() == rUI_FAIL)
@@ -4451,7 +4563,7 @@ void UI_UpdateTxDevStatusInfo(UI_CamNum_t tCamNum)
 		else
 			break;
 	}
-	printf("UI_UpdateTxDevStatusInfo tCamNum = %d success\n",tCamNum);
+	//printf("UI_UpdateTxDevStatusInfo tCamNum = %d success\n",tCamNum);
 }
 
 
@@ -4484,6 +4596,14 @@ void UI_UpdateDevStatusInfo(void)
 	SF_Write(ulUI_SFAddr, sizeof(UI_DeviceStatusInfo_t), (uint8_t *)&tUI_DevStsInfo);
 	SF_EnableWrProtect();
 	osMutexRelease(APP_UpdateMutex);
+#ifdef RTC676x
+	for(UI_CamNum_t tCamNum = CAM1;tCamNum < CAM_4T;tCamNum++)
+	{
+		if(ubUI_Hdw24gAlgEnable[tCamNum] && tUI_CamStatus[tCamNum].tCamConnSts == CAM_ONLINE &&
+			PAIR_IsHdw24gCam(APP_GetSTANumMappingTable(tCamNum)->tPAIR_StaNum))
+			UI_SendHdw24gCursor(tCamNum, TRUE);
+	}
+#endif
 }
 
 
@@ -4504,7 +4624,7 @@ void UI_CheckScanModeCount(void)
 //------------------------------------------------------------------------------
 void UI_ScanModeExec(void)
 {
-	printf("UI_ScanModeExec\n");
+	//printf("UI_ScanModeExec\n");
 	UI_CamNum_t tUI_ViewSel;
 	
 	if(MenuOnFlag || TriggerLock || ubUI_CuStandbyFlag || tUI_ViewModeSel != SCANVIEW_ITEM)
@@ -4541,7 +4661,7 @@ void UI_ScanModeExec(void)
 		
 	}
 	tUI_AutoScanNumSel = tUI_ViewSel;
-	printf("UI_ScanModeExec tUI_ViewSel = %d\n",tUI_ViewSel);
+	//printf("UI_ScanModeExec tUI_ViewSel = %d\n",tUI_ViewSel);
 	ulAutoScanCount = tUI_CuSetting.AutoScanDuty[tUI_AutoScanNumSel]* 1000;
 	ubAutoScanReady = TRUE;
 }
@@ -4569,7 +4689,7 @@ void UI_SwitchCameraSource(void)
 	tUI_SwitchBuMsg.ubAPP_Message[5] = tCamViewSel.tCamViewPool[3];
 	tUI_SwitchBuMsg.ubAPP_Message[6] = tUI_CuSetting.ubSD_Switch;
 	UI_SendMessageToAPP(&tUI_SwitchBuMsg);
-	printf("---------------UI_SwitchCameraSource\n");
+	//printf("---------------UI_SwitchCameraSource\n");
 
 }
 
@@ -4585,6 +4705,64 @@ void UI_SwitchAudioSource(UI_CamNum_t tCamNum)
 	UI_SendMessageToAPP(&tUI_SwitchAdoSrcMsg);
 }
 //------------------------------------------------------------------------------
+static void UI_DrawBSDRange(void)
+{
+	UI_CamViewType_t tViewType = tCamViewSel.tCamViewType;
+	uint8_t ubViewCount, ubIsShow = FALSE;
+	switch(tViewType)
+	{
+		case SINGLE_VIEW:
+			ubViewCount = 1;
+			break;
+		case DUAL_VIEW:
+			ubViewCount = 2;
+			break;
+		case QUAD_VIEW:
+			ubViewCount = 4;
+			break;
+		default:
+			return;
+	}
+	for(uint8_t ubView = 0;ubView < ubViewCount;ubView++)
+	{
+		uint8_t ubCam = tCamViewSel.tCamViewPool[ubView];
+		if(!tUI_CuSetting.ubIsEnableBSDRANGE[ubCam])
+			continue;
+		UI_ParkinglinePoint_t tRange = tUI_CuSetting.tUI_AIDetectlinePoint[ubCam];
+		UI_LinePoint_t *ptPoint[AI_RANGE_POINT_MAX] = {
+			&tRange.tupLeft, &tRange.tupRight, &tRange.tdownLeft, &tRange.tdownRight
+		};
+		UI_LinePoint_t tLinePoint[4][2];
+		for(uint8_t i = 0;i < AI_RANGE_POINT_MAX;i++)
+		{
+			UI_LinePoint_t *ptCorner = &tLinePoint[(i < 2)?0:3][i%2];
+			*ptCorner = *ptPoint[i];
+			if(tViewType != SINGLE_VIEW)
+				ptCorner->xPoint = ptCorner->xPoint/2 + (ubView%2)*(OSD_WIDTH/2);
+			if(tViewType == QUAD_VIEW)
+			{
+				ptCorner->yPoint /= 2;
+				if(ptCorner->yPoint > OSD_HEIGHT/2 - 4)
+					ptCorner->yPoint = OSD_HEIGHT/2 - 4;
+				ptCorner->yPoint += (ubView/2)*(OSD_HEIGHT/2);
+			}
+		}
+		for(uint8_t i = 1;i < 3;i++)
+		{
+			uint8_t ubPosition = (i == 1)?tUI_CuSetting.tLocation1[ubCam]:tUI_CuSetting.tLocation2[ubCam];
+			for(uint8_t j = 0;j < 2;j++)
+			{
+				tLinePoint[i][j].xPoint = tLinePoint[0][j].xPoint + (tLinePoint[3][j].xPoint - tLinePoint[0][j].xPoint)*ubPosition/AI_RANGE_LINE_STEPS;
+				tLinePoint[i][j].yPoint = tLinePoint[0][j].yPoint + (tLinePoint[3][j].yPoint - tLinePoint[0][j].yPoint)*ubPosition/AI_RANGE_LINE_STEPS;
+			}
+		}
+		UI_AIDrawRangeLines(tLinePoint, OSD_IMG1);
+		ubIsShow = TRUE;
+	}
+	if(ubIsShow)
+		OSD_UpdateImg1AndImg2();
+}
+//------------------------------------------------------------------------------
 void UI_DrawDesktopIcon(void)
 {
 	OSD_IMG_INFO tOsdImgInfo,tVoiceOsdImgInfo;
@@ -4592,6 +4770,8 @@ void UI_DrawDesktopIcon(void)
 	uint16_t uwLcd_VSize = uwLCD_GetLcdVoSize();
 	UI_CamViewType_t tUI_CamViewType = tCamViewSel.tCamViewType;
 	uint16_t uwCam1WordOsdIndex = (tUI_CuSetting.tLanguage != LANGUAGE_GERMAN)?OSD2IMG_DESKTOP_CAM1_WORD:OSD2IMG_DESKTOP_CAM1_WORD_GER;
+	if(ubDrawBSDRange == TRUE)
+		UI_DrawBSDRange();
 	
 	tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_DESKTOP_VOICE_MUTE + 1 - tUI_CuSetting.ubMuteFlag, 1, &tVoiceOsdImgInfo);
 	switch(tUI_CamViewType)
@@ -4606,12 +4786,14 @@ void UI_DrawDesktopIcon(void)
 				tOSD_Img2(&tOsdImgInfo, OSD_UPDATE);
 			}
 			//ÂÄíËΩ¶Á∫ø
-			if(tUI_CuSetting.tParkingLineEnable[tCamViewSel.tCamViewPool[0]] == PARKING_LINE_ON)
+			if(!tUI_CuSetting.ubIsEnableBSDRANGE[tCamViewSel.tCamViewPool[0]] &&
+				tUI_CuSetting.tParkingLineEnable[tCamViewSel.tCamViewPool[0]] == PARKING_LINE_ON)
 			{
 				UI_DrawParkingLine(tCamViewSel.tCamViewPool[0],OSD_UPDATE);
 			}
 			//ÂºïÂØºÁ∫ø
-			if(tUI_CuSetting.GuideLineEnable[tCamViewSel.tCamViewPool[0]])
+			if(!tUI_CuSetting.ubIsEnableBSDRANGE[tCamViewSel.tCamViewPool[0]] &&
+				tUI_CuSetting.GuideLineEnable[tCamViewSel.tCamViewPool[0]])
 			{
 				tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_GUIDELINE_SIZE1 + tUI_CuSetting.GuideLineSize[tCamViewSel.tCamViewPool[0]], 1, &tOsdImgInfo);
 				tOsdImgInfo.uwXStart = (tUI_CuSetting.GuideLine_XY[tCamViewSel.tCamViewPool[0]][0] << 8) + tUI_CuSetting.GuideLine_XY[tCamViewSel.tCamViewPool[0]][1];
@@ -4759,7 +4941,7 @@ void UI_SwitchViewType(UI_CamNum_t tUI_CamSel,uint8_t ubClosePanel)
 		osSemaphoreWait(osUI_UpdateStatusCtr, osWaitForever);	
 		osSemaphoreWait(osUI_CuTriggerCtr, osWaitForever);
 	}
-	printf("UI_SwitchViewType tUI_CamSel = %d\n",tUI_CamSel);
+	//printf("UI_SwitchViewType tUI_CamSel = %d\n",tUI_CamSel);
 	ubUI_FinishViewSwitch = FALSE;
 	UI_CamViewType_t tCamViewTypeSel;
 	if(ubClosePanel)
@@ -4837,7 +5019,7 @@ void UI_PelcoZoomEventExec(void *pvTriggerEvent)
 		u_TryCnt = 5;
 		while(u_TryCnt--)
 		{
-			printf("UI_PelcoZoomEventExec CheckPictureMirrorFlip\n");
+			//printf("UI_PelcoZoomEventExec CheckPictureMirrorFlip\n");
 			if(tTWC_Send(tUI_ViewSel, TWC_PELCO, (uint8_t *)&CheckPictureMirrorFlip[0], 7, 10) == TWC_SUCCESS)
 				break;
 			osDelay(10);
@@ -4849,7 +5031,7 @@ void UI_PelcoZoomEventExec(void *pvTriggerEvent)
 		u_TryCnt = 5;
 		while(u_TryCnt--)
 		{
-			printf("UI_PelcoZoomEventExec CheckSensorStatus\n");
+			//printf("UI_PelcoZoomEventExec CheckSensorStatus\n");
 			if(tTWC_Send(tUI_ViewSel, TWC_PELCO, (uint8_t *)&CheckSensorStatus[0], 7, 10) == TWC_SUCCESS)
 				break;
 			osDelay(10);
@@ -4859,7 +5041,7 @@ void UI_PelcoZoomEventExec(void *pvTriggerEvent)
 		u_TryCnt = 5;
 		while(u_TryCnt--)
 		{
-			printf("UI_PelcoZoomEventExec CheckAlarmRoi\n");
+			//printf("UI_PelcoZoomEventExec CheckAlarmRoi\n");
 			if(tTWC_Send(tUI_ViewSel, TWC_PELCO, (uint8_t *)&CheckAlarmRoi[0], 7, 10) == TWC_SUCCESS)
 				break;
 			osDelay(10);
@@ -4874,7 +5056,7 @@ void UI_PelcoZoomEventExec(void *pvTriggerEvent)
 
 void UI_TriggerEventExec(void *pvTriggerEvent)
 {
-	printf("UI_TriggerEventExec\n");
+	//printf("UI_TriggerEventExec\n");
 	TRIGGER_EVENT_t * ptTriggerEvent = (TRIGGER_EVENT_t*)pvTriggerEvent;
 	UI_CamNum_t tUI_ViewSel = ptTriggerEvent->tUI_ViewSel;
 	
@@ -4891,7 +5073,8 @@ void UI_TriggerEventExec(void *pvTriggerEvent)
 	//ÂÄíËΩ¶ÂÖâÊ†á
 	if(TriggerLock && tUI_ViewSel <= CAM4 && !(tUI_CuSetting.ubZoomfootswitch))
 	{
-		if(tUI_CuSetting.tParkingLineEnable[tUI_ViewSel] == PARKING_LINE_AUTO)
+		if(!tUI_CuSetting.ubIsEnableBSDRANGE[tUI_ViewSel] &&
+			tUI_CuSetting.tParkingLineEnable[tUI_ViewSel] == PARKING_LINE_AUTO)
 		{
 			UI_DrawParkingLine(tUI_ViewSel,OSD_UPDATE);
 		}
@@ -6021,7 +6204,7 @@ void UI_CheckMenuOffCount(void)
     if (cnt >= 15)
     {
 		cnt = 0;
-		printf("ulMenuAutoOffCount = %d, MenuOnFlag = %d\n", ulMenuAutoOffCount, MenuOnFlag);
+		//printf("ulMenuAutoOffCount = %d, MenuOnFlag = %d\n", ulMenuAutoOffCount, MenuOnFlag);
     }
 	
 	if(ulMenuAutoOffCount == 0 && MenuOnFlag == TRUE)
@@ -6164,7 +6347,7 @@ void UI_ShowRecordingStatus(void)
 //------------------------------------------------------------------
 void UI_BackToDesktop(uint8_t ubSwitchView)
 {
-	printf("UI_BackToDesktop\n");
+	//printf("UI_BackToDesktop\n");
 	if(ubSwitchView && !TriggerLock)
 		UI_SwitchViewType(DeskTopShowView,FALSE);
 	
@@ -6172,18 +6355,21 @@ void UI_BackToDesktop(uint8_t ubSwitchView)
 	MenuOnFlag = FALSE;
 	SendIrCodeFlag = FALSE;
 	tUI_State = UI_DISPLAY_STATE;
+	ubDrawBSDRange = TRUE;
 	UI_DrawDesktopIcon();
 
-	if(TriggerLock && DeskTopShowView <= CAM4 && tUI_CuSetting.tParkingLineEnable[DeskTopShowView] == PARKING_LINE_AUTO)
+	if(TriggerLock && tCamViewSel.tCamViewType == SINGLE_VIEW &&
+		!tUI_CuSetting.ubIsEnableBSDRANGE[tCamViewSel.tCamViewPool[0]] &&
+		tUI_CuSetting.tParkingLineEnable[tCamViewSel.tCamViewPool[0]] == PARKING_LINE_AUTO)
 	{
-		UI_DrawParkingLine(DeskTopShowView,OSD_UPDATE);
+		UI_DrawParkingLine(tCamViewSel.tCamViewPool[0],OSD_UPDATE);
 	}
 
 }
 //------------------------------------------------------------------
 void UI_EnterStandby(void)
 {
-	printf("---UI_EnterStandby\n");
+	//printf("---UI_EnterStandby\n");
 	ubUI_CuStandbyFlag = TRUE;
 	UI_PanelOff();
 	UI_AudioOff();
@@ -6202,7 +6388,7 @@ void UI_EnterStandby(void)
 //------------------------------------------------------------------
 void UI_WakeupStandby(void)
 {
-	printf("UI_WakeupStandby\n");
+	//printf("UI_WakeupStandby\n");
 	if(ubUI_CuPowerOffFlag)
 	{
 		SYS_Reboot();
@@ -6211,6 +6397,7 @@ void UI_WakeupStandby(void)
 	ubUI_CuStandbyFlag = FALSE;
 	UI_SwitchViewType(DeskTopShowView,TRUE);
 	UI_ClearOsdImageNoUpdate();
+	ubDrawBSDRange = TRUE;
 	UI_DrawDesktopIcon();
 	BUZZER_DI(150);
 	POWER_LED_IO = 0;
@@ -6363,7 +6550,7 @@ void UI_SetTxImgProc2(UI_CamNum_t tCamNum) //for zoom
 //		if(	tTWC_Send(tCamNum, TWC_PELCO, (uint8_t *)&Picture_Mirror_Flip[0], 7, 8) == TWC_SUCCESS)
 //			break;
 //	}
-	printf("UI_SetTxImgProc2 tCamNum = %d success\n",tCamNum);
+	//printf("UI_SetTxImgProc2 tCamNum = %d success\n",tCamNum);
 }
 
 void UI_SetTxImgProc(UI_CamNum_t tCamNum)
@@ -6476,7 +6663,7 @@ void UI_SetTxImgProc(UI_CamNum_t tCamNum)
 			break;
 
 	}
-	printf("UI_SetTxImgProc tCamNum = %d success\n",tCamNum);
+	//printf("UI_SetTxImgProc tCamNum = %d success\n",tCamNum);
 }
 //------------------------------------------------------------------
 void UI_SaveLastMode(void)
@@ -6515,7 +6702,7 @@ void UI_DrawRedBox(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2)
 	}
 
 
-	printf("trace box x1 = %d y1 = %d x2 = %d y2 = %d \n", x1, y1, x2, y2);
+	//printf("trace box x1 = %d y1 = %d x2 = %d y2 = %d \n", x1, y1, x2, y2);
 	if (((x2 - x1) < AI_AREA_MIN_SIZE) || ((y2 - y1) < AI_AREA_MIN_SIZE))
 	{
 		printf("trace box too small x1 = %d y1 = %d x2 = %d y2 = %d \n", x1, y1, x2, y2);
@@ -7226,7 +7413,7 @@ void UI_EnterAdjustZoomArea(void)
 
 	UI_EnterAdjustAreaClosePakt(CAM, FALSE);
 
-	printf("Draw zoom box \n");
+	//printf("Draw zoom box \n");
 	UI_DrawRedBox(tUI_CuSetting.usZoomRedbox[CAM][0], tUI_CuSetting.usZoomRedbox[CAM][1], \
 		          tUI_CuSetting.usZoomRedbox[CAM][2], tUI_CuSetting.usZoomRedbox[CAM][3]);
 

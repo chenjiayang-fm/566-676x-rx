@@ -18,7 +18,7 @@ extern uint8_t ubZoomRestartFlag;
 
 bool is_any_heating_cam_paired()
 {
-	printf("Heating Cam Flag: %d %d %d %d\n", tUI_CuSetting.ubiHeatingCamFlag[0], tUI_CuSetting.ubiHeatingCamFlag[1], tUI_CuSetting.ubiHeatingCamFlag[2], tUI_CuSetting.ubiHeatingCamFlag[3]);
+	//printf("Heating Cam Flag: %d %d %d %d\n", tUI_CuSetting.ubiHeatingCamFlag[0], tUI_CuSetting.ubiHeatingCamFlag[1], tUI_CuSetting.ubiHeatingCamFlag[2], tUI_CuSetting.ubiHeatingCamFlag[3]);
 	return	tUI_CuSetting.ubiHeatingCamFlag[0] || 
 			tUI_CuSetting.ubiHeatingCamFlag[1] ||
 			tUI_CuSetting.ubiHeatingCamFlag[2] || 
@@ -31,6 +31,10 @@ void UI_DrawMenuPage(void)
 	uint8_t i;
 	OSD_IMG_INFO tOsdImgInfo[UI_MENUICON_NUM*2];
 	MenuOnFlag = TRUE;
+	UI_ClearOsdImageNoUpdate();
+	ubDrawBSDRange = FALSE;
+	UI_DrawDesktopIcon();
+	ubDrawBSDRange = TRUE;
 	tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_ADO_MODENOR_MENUICON, (UI_MENUICON_NUM*2), &tOsdImgInfo[0]);
 
 	// draw heating icon?
@@ -169,10 +173,16 @@ void UI_DrawVolumeMenuPage(void)
 	OSD_IMG_INFO tOsdImgInfo[4];
 	MenuOnFlag = TRUE;
 	tUI_State = UI_SET_VOLUME_STATE;
+	UI_ClearOsdImageNoUpdate();
+	ubDrawBSDRange = FALSE;
+	UI_DrawDesktopIcon();
+	ubDrawBSDRange = TRUE;
 	SendIrCodeFlag = 1;
-	if(TriggerLock && DeskTopShowView <= CAM4 && tUI_CuSetting.tParkingLineEnable[DeskTopShowView] != PARKING_LINE_OFF)//����������
+	if(TriggerLock && tCamViewSel.tCamViewType == SINGLE_VIEW &&
+		!tUI_CuSetting.ubIsEnableBSDRANGE[tCamViewSel.tCamViewPool[0]] &&
+		tUI_CuSetting.tParkingLineEnable[tCamViewSel.tCamViewPool[0]] != PARKING_LINE_OFF)//����������
 	{
-		UI_EraseParkingLine(DeskTopShowView,OSD_QUEUE);
+		UI_EraseParkingLine(tCamViewSel.tCamViewPool[0],OSD_QUEUE);
 	}
 	tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_SOUND_SLIDER, 4, &tOsdImgInfo[0]);
 	
@@ -253,9 +263,11 @@ void UI_VolumeMenuPage(UI_ArrowKey_t tArrowKey)
 			MenuOnFlag = FALSE;
 			tUI_State = UI_DISPLAY_STATE;
 			UI_DrawDesktopIcon();
-			if(TriggerLock && DeskTopShowView <= CAM4 && tUI_CuSetting.tParkingLineEnable[DeskTopShowView] != PARKING_LINE_OFF)
+			if(TriggerLock && tCamViewSel.tCamViewType == SINGLE_VIEW &&
+				!tUI_CuSetting.ubIsEnableBSDRANGE[tCamViewSel.tCamViewPool[0]] &&
+				tUI_CuSetting.tParkingLineEnable[tCamViewSel.tCamViewPool[0]] != PARKING_LINE_OFF)
 			{
-				UI_DrawParkingLine(DeskTopShowView,OSD_UPDATE);
+				UI_DrawParkingLine(tCamViewSel.tCamViewPool[0],OSD_UPDATE);
 			}
 			return;
 		case ENTER_ARROW:
@@ -1131,7 +1143,7 @@ void UI_ZoomSettingCameraTouchFunc(TOUCH_EVENT_t *Touch_Info)
 					Touch_Info->endY < tOsdImgInfo[2].uwYStart + tOsdImgInfo[2].uwVSize)))
 				{
 					send_ret = tTWC_Send(TWC_STA1 + uwZoomItemIdx, TWC_PELCO, (uint8_t *)&pelco_stop[0], 7, 8);
-					printf("TOUCH_PRESSDOWN stop\n");
+					//printf("TOUCH_PRESSDOWN stop\n");
 					isZoomExecute = 0;
 					UI_ZoomDrawSettingCameraItem();
 					break;
@@ -1624,8 +1636,8 @@ uint8_t sentBSDAIareaCoord(void)
 
 	ret = tTWC_Send(TWC_STA1 + uwZoomItemIdx, TWC_PELCO, (uint8_t *)&AlarmAreaPakt[0], 7, 5);
 
-	printf("usTempZoomRedbox[0] = 0x%x, [1] = 0x%x, [2] = 0x%x, [3] = 0x%x\n",\
-		usTempZoomBSDBigRedbox[0],usTempZoomBSDBigRedbox[1],usTempZoomBSDBigRedbox[2],usTempZoomBSDBigRedbox[3]);
+	//printf("usTempZoomRedbox[0] = 0x%x, [1] = 0x%x, [2] = 0x%x, [3] = 0x%x\n",\
+		//usTempZoomBSDBigRedbox[0],usTempZoomBSDBigRedbox[1],usTempZoomBSDBigRedbox[2],usTempZoomBSDBigRedbox[3]);
 
 	x1 = (uint8_t)((usTempZoomBSDBigRedbox[0] & 0xFF00) >> 8);
 	x2 = (uint8_t)((usTempZoomBSDBigRedbox[0] & 0x00FF) >> 0);
@@ -1652,8 +1664,8 @@ uint8_t sentBSDAIareaCoord(void)
 	ret += tTWC_Send(TWC_STA1 + uwZoomItemIdx, TWC_PELCO, (uint8_t *)&AlarmAreaBigRightBottomCoordPakt[0], 7, 5);
 
 	
-	printf("usTempZoomRedbox[0] = 0x%x, [1] = 0x%x, [2] = 0x%x, [3] = 0x%x\n",\
-		usTempZoomBSDSmallRedbox[0],usTempZoomBSDSmallRedbox[1],usTempZoomBSDSmallRedbox[2],usTempZoomBSDSmallRedbox[3]);
+	//printf("usTempZoomRedbox[0] = 0x%x, [1] = 0x%x, [2] = 0x%x, [3] = 0x%x\n",\
+		//usTempZoomBSDSmallRedbox[0],usTempZoomBSDSmallRedbox[1],usTempZoomBSDSmallRedbox[2],usTempZoomBSDSmallRedbox[3]);
 	x1 = (uint8_t)((usTempZoomBSDSmallRedbox[0] & 0xFF00) >> 8);
 	x2 = (uint8_t)((usTempZoomBSDSmallRedbox[0] & 0x00FF) >> 0);
 	y1 = (uint8_t)((usTempZoomBSDSmallRedbox[1] & 0xFF00) >> 8);
@@ -1795,7 +1807,7 @@ static void AdjustZoomTraceArea(UI_ZoomVirtualKeyItemList_t ZoomVirtualKey)
 	switch(ZoomTraceBoxMoveSelect)
 	{
 		case ZOOM_BSD_AI_AREA_SMALL_LEFT_ITEM:
-			printf("AdjustZoomTraceArea ZOOM_BSD_AI_AREA_SMALL_LEFT_ITEM\n");
+			//printf("AdjustZoomTraceArea ZOOM_BSD_AI_AREA_SMALL_LEFT_ITEM\n");
 			switch(ZoomVirtualKey)
 			{
 				case ZOOM_VIRTUAL_LEFT_KEY:
@@ -1842,7 +1854,7 @@ static void AdjustZoomTraceArea(UI_ZoomVirtualKeyItemList_t ZoomVirtualKey)
 			}	
 			break;
 		case ZOOM_BSD_AI_AREA_SMALL_UP_ITEM:
-			printf("AdjustZoomTraceArea ZOOM_BSD_AI_AREA_SMALL_UP_ITEM\n");
+			//printf("AdjustZoomTraceArea ZOOM_BSD_AI_AREA_SMALL_UP_ITEM\n");
 			switch(ZoomVirtualKey)
 			{
 				case ZOOM_VIRTUAL_LEFT_KEY:
@@ -1888,7 +1900,7 @@ static void AdjustZoomTraceArea(UI_ZoomVirtualKeyItemList_t ZoomVirtualKey)
 			}	
 			break;
 		case ZOOM_BSD_AI_AREA_SMALL_RIGHT_ITEM:
-			printf("AdjustZoomTraceArea ZOOM_BSD_AI_AREA_SMALL_RIGHT_ITEM\n");
+			//printf("AdjustZoomTraceArea ZOOM_BSD_AI_AREA_SMALL_RIGHT_ITEM\n");
 			switch(ZoomVirtualKey)
 			{
 				case ZOOM_VIRTUAL_LEFT_KEY:
@@ -1934,7 +1946,7 @@ static void AdjustZoomTraceArea(UI_ZoomVirtualKeyItemList_t ZoomVirtualKey)
 			}	
 			break;
 		case ZOOM_BSD_AI_AREA_SMALL_DOWN_ITEM:
-			printf("AdjustZoomTraceArea ZOOM_BSD_AI_AREA_SMALL_DOWN_ITEM\n");
+			//printf("AdjustZoomTraceArea ZOOM_BSD_AI_AREA_SMALL_DOWN_ITEM\n");
 			switch(ZoomVirtualKey)
 			{
 				case ZOOM_VIRTUAL_LEFT_KEY:
@@ -1981,7 +1993,7 @@ static void AdjustZoomTraceArea(UI_ZoomVirtualKeyItemList_t ZoomVirtualKey)
 			}	
 			break;
 		case ZOOM_BSD_AI_AREA_ALL_MOVE_ITEM:
-			printf("AdjustZoomTraceArea ZOOM_BSD_AI_AREA_ALL_MOVE_ITEM\n");
+			//printf("AdjustZoomTraceArea ZOOM_BSD_AI_AREA_ALL_MOVE_ITEM\n");
 			switch(ZoomVirtualKey)
 			{
 				case ZOOM_VIRTUAL_LEFT_KEY:
@@ -2801,7 +2813,7 @@ void UI_AdjustZoomBSDArea(UI_ArrowKey_t tArrowKey)
 		}
 		case DRAW_MENUPAGE:
 		{
-			printf("UI_AdjustZoomBSDArea DRAW_MENUPAGE\n");
+			//printf("UI_AdjustZoomBSDArea DRAW_MENUPAGE\n");
 			UI_AdjustZoomBSDExecute();
 			break;
 		}

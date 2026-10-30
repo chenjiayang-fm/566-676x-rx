@@ -578,6 +578,9 @@ void OSD_EraserFont (uint16_t uwHFontNum, uint16_t uwVFontNum, uint16_t uwXStart
 	\endcode
 */
 OSD_RESULT tOSD_Img1 (OSD_IMG_INFO *pInfor, OSD_UPDATE_TYP tMode);
+// Queue OSD1 points without full-screen copies, then publish the completed background.
+OSD_RESULT tOSD_Img1_NoCopy (OSD_IMG_INFO *pInfor, OSD_UPDATE_TYP tMode);
+void OSD_UpdateImg1AndImg2(void);
 //------------------------------------------------------------------------------
 /*!
 	\brief 		Display Image 2 OSD Function

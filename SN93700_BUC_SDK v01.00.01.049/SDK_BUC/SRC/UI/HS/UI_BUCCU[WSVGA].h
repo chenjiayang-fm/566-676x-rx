@@ -62,6 +62,34 @@
 #define MENUAUTOOFFCOUNT  30000 
 #define PANELAUTOOFFCOUNT  60000 
 
+// Reused OSD images: shared placement for drawing and touch.
+// Pairing / delete camera buttons (X and size come from PAIRCAM images).
+#define PAIRING_Y                    215
+#define PAIRING_Y_STEP               100
+
+// Camera sliders / highlight frames (X and size come from brightness images).
+#define CAMERA_SLIDER_Y              180
+#define CAMERA_HL_Y                  176
+#define CAMERA_Y_STEP                70
+
+// Trigger delay / priority numeric frames.
+#define TRIGGER_X                    220
+#define TRIGGER_Y                    200
+#define TRIGGER_X_STEP               140
+#define TRIGGER_Y_STEP               80
+
+// Auto scan switches / delay numeric frames.
+#define AUTOSCAN_SWITCH_X            240
+#define AUTOSCAN_SWITCH_Y            195
+#define AUTOSCAN_DELAY_X             340
+#define AUTOSCAN_DELAY_Y             185
+
+// Parking line / guide line switches.
+#define PARKINGLINE_SWITCH_X         250
+#define PARKINGLINE_SWITCH_Y         215
+#define PARKINGLINE_X_STEP           400
+#define PARKINGLINE_Y_STEP           140
+
 #define COMMAND_LENGTH 7
 #define AI_AREA_MIN_SIZE 80
 
@@ -451,8 +479,52 @@ typedef enum
 	POWERONSET_ITEM,
 	PARKINGLINE_ITEM,
 	GUIDELINE_ITEM,
+	AI_ITEM,
 	SETTINGITEM_MAX
 }UI_SettingSubMenuItemList_t;
+
+#define AI_CONFIG_X                  285
+#define AI_CONFIG_Y                  175
+#define AI_CONFIG_X_STEP             147
+
+#define AI_RANGE_POINT_MAX           4
+#define AI_RANGE_HANDLE_MAX          7
+#define AI_RANGE_LINE_MAX            2
+#define AI_RANGE_LINE_STEPS          12
+#define AI_RANGE_MOVE_STEP           8
+#define AI_RANGE_DEFAULT_POINT       { .tupLeft = {400,100}, .tupRight = {700,100}, \
+	.tdownLeft = {160,580}, .tdownRight = {940,580} }
+#define AI_RANGE_DEFAULT_LINE1       4
+#define AI_RANGE_DEFAULT_LINE2       8
+
+typedef enum
+{
+	AI_PD_CAM1, AI_PD_CAM2, AI_PD_CAM3, AI_PD_CAM4,
+	AI_CD_CAM1, AI_CD_CAM2, AI_CD_CAM3, AI_CD_CAM4,
+	AI_ALARM_CAM1, AI_ALARM_CAM2, AI_ALARM_CAM3, AI_ALARM_CAM4,
+	AI_TRIGGER_CAM1, AI_TRIGGER_CAM2, AI_TRIGGER_CAM3, AI_TRIGGER_CAM4,
+	AI_BSDRANGE_CAM1, AI_BSDRANGE_CAM2, AI_BSDRANGE_CAM3, AI_BSDRANGE_CAM4,
+	AI_MAX
+}UI_AISubMenuItemList_t;
+
+typedef enum
+{
+	AI_RANGE_ENABLE,
+	AI_RANGE_UP,
+	AI_RANGE_LEFT,
+	AI_RANGE_OK,
+	AI_RANGE_RIGHT,
+	AI_RANGE_DOWN,
+	AI_RANGE_RESET,
+	AI_RANGE_ITEM_MAX
+}UI_AIRangeItemList_t;
+
+void UI_AISubMenuExecute(void);
+void UI_AISubSubMenuPage(UI_ArrowKey_t tArrowKey);
+void UI_AISubSubTouchMenuPage(TOUCH_EVENT_t *Touch_Info);
+void UI_AIEnterRange(uint8_t ubCam);
+void UI_AISubSubSubMenuPage(UI_ArrowKey_t tArrowKey);
+void UI_AISubSubSubTouchMenu(TOUCH_EVENT_t *Touch_Info);
 
 typedef enum
 {
@@ -988,10 +1060,25 @@ typedef struct
 }UI_Calendar_t;
 #endif
 
-#define REC_FOLDER_LIST_MAXNUM	10
-#define REC_FILE_LIST_MAXNUM	8
 #pragma pack(push) /* push current alignment to stack */
 #pragma pack(1) /* set alignment to 1 byte boundary */
+typedef struct
+{
+	int xPoint;
+	int yPoint;
+}UI_LinePoint_t;
+
+typedef struct
+{
+	UI_LinePoint_t tupLeft;
+	UI_LinePoint_t tupRight;
+	UI_LinePoint_t tdownLeft;
+	UI_LinePoint_t tdownRight;
+	/* data */
+}UI_ParkinglinePoint_t;
+
+#define REC_FOLDER_LIST_MAXNUM	10
+#define REC_FILE_LIST_MAXNUM	8
 #if 0
 	typedef struct
 	{
@@ -1195,6 +1282,14 @@ typedef struct
 	uint8_t ubiHeatingCamFlag[4];
 	uint8_t heating_time[4];	// 0=3min, 1=5min, 2=10min
 	uint8_t ubKeyLock;
+	uint8_t ubDetectPeopleFlag[CAM_4T];
+	uint8_t ubDetectCarFlag[CAM_4T];
+	uint8_t ubIsEnableBSDALARM[CAM_4T];
+	uint8_t ubBSDTriggerOut[CAM_4T];
+	uint8_t ubIsEnableBSDRANGE[CAM_4T];
+	UI_ParkinglinePoint_t tUI_AIDetectlinePoint[CAM_4T];
+	uint8_t tLocation1[CAM_4T];
+	uint8_t tLocation2[CAM_4T];
 	uint8_t	ubReserved[2];
 }UI_CUSetting_t;
 
@@ -1469,6 +1564,7 @@ void UI_TriggerEventExec(void *pvTouchEvent);
 void UI_PelcoZoomEventExec(void *pvTriggerEvent);
 void UI_DrawParkingLine(uint8_t ubCamNum,OSD_UPDATE_TYP tMode);
 void UI_EraseParkingLine(uint8_t ubCamNum,OSD_UPDATE_TYP tMode);
+void UI_AIDrawRangeLines(UI_LinePoint_t tLinePoint[4][2], OSD_LAYER_TYP tOsdLayer);
 void UI_DrawDesktopIcon(void);
 void UI_ResetUIParameter(void);
 uint8_t UI_UpdateBSDAndTraceCtrl(UI_CamNum_t tCamNum);
@@ -1599,6 +1695,7 @@ extern uint8_t ubisCameraConfigFlag;
 
 extern uint8_t ParkingLineRemoteMode;
 extern uint8_t ubAutoScanReady;
+extern uint8_t ubDrawBSDRange;
 extern UI_CamNum_t TriggerBackUp_View;
 extern osSemaphoreId osUI_CuTriggerCtr;
 extern osSemaphoreId osUI_CuUiCtr;

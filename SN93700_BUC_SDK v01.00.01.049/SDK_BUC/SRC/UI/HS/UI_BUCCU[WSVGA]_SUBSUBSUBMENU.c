@@ -1,6 +1,7 @@
 
 #include "UI_BUCCU[WSVGA]_SUBSUBSUBMENU.h"
 #include "math.h"
+#include <stdlib.h>
 #ifdef BSP_D_SNCC71_GM8285C_RX_V2
 
 void UI_CameraSubSubSubMenuPage(UI_ArrowKey_t tArrowKey);
@@ -36,6 +37,9 @@ void UI_SubSubSubKeyMenu(UI_ArrowKey_t tArrowKey)
 						break;
 					case PARKINGLINE_ITEM:
 						UI_ParkingLineSubSubSubMenuPage(tArrowKey);
+						break;
+					case AI_ITEM:
+						UI_AISubSubSubMenuPage(tArrowKey);
 						break;
 					case GUIDELINE_ITEM:
 						UI_GuideLineSubSubSubMenuPage(tArrowKey);
@@ -335,7 +339,8 @@ static void UI_CameraDrawSubSubSubMenuItem()
 		if(ubItemPreIdx <= CAMERA_VOLUME)
 		{
 			//�Ȳ���ѡ�п�
-			tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_CAMS_BRIGHTNESS_GREEN_HL + 2*ubItemPreIdx, 1, &tOsdImgInfo[0]);
+			tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_CAMS_BRIGHTNESS_GREEN_HL, 1, &tOsdImgInfo[0]);
+			tOsdImgInfo[0].uwYStart = CAMERA_HL_Y + CAMERA_Y_STEP*ubItemPreIdx;
 			OSD_EraserImg2_NoUpdate(&tOsdImgInfo[0]);
 			//word
 			tOSD_GetOsdImgInfor(1, OSD_IMG2, ((tUI_CuSetting.tLanguage == LANGUAGE_ENGLISH)?OSD2IMG_CAMS_BRIGHTNESS_WORD:
@@ -343,7 +348,8 @@ static void UI_CameraDrawSubSubSubMenuItem()
 											(tUI_CuSetting.tLanguage == LANGUAGE_FRENCH)?OSD2IMG_CAMS_BRIGHTNESS_WORD_FR:OSD2IMG_CAMS_BRIGHTNESS_WORD_CHN) + ubItemPreIdx, 1, &tOsdImgInfo[0]);
 			tOSD_Img2(&tOsdImgInfo[0],OSD_QUEUE);
 			//slider
-			tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_CAMS_BRIGHTNESS_SLIDER + ubItemPreIdx, 1, &tOsdImgInfo[0]);
+			tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_CAMS_BRIGHTNESS_SLIDER, 1, &tOsdImgInfo[0]);
+			tOsdImgInfo[0].uwYStart = CAMERA_SLIDER_Y + CAMERA_Y_STEP*ubItemPreIdx;
 			tOSD_Img2(&tOsdImgInfo[0],OSD_QUEUE);
 			//round
 			tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_CAMS_ROUND_HL, 1, &tOsdImgInfo[1]);
@@ -403,7 +409,8 @@ static void UI_CameraDrawSubSubSubMenuItem()
 	//--------------------------------CurIdx----------------------------------------------------
 	if(ubItemCurIdx <= CAMERA_VOLUME)
 	{
-		tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_CAMS_BRIGHTNESS_GREEN_HL + 2*ubItemCurIdx + CameraSubSubSubRemoteMode, 1, &tOsdImgInfo[0]);
+		tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_CAMS_BRIGHTNESS_GREEN_HL + CameraSubSubSubRemoteMode, 1, &tOsdImgInfo[0]);
+		tOsdImgInfo[0].uwYStart = CAMERA_HL_Y + CAMERA_Y_STEP*ubItemCurIdx;
 		tOSD_Img2(&tOsdImgInfo[0],OSD_QUEUE);
 		//word
 		tOSD_GetOsdImgInfor(1, OSD_IMG2, ((tUI_CuSetting.tLanguage == LANGUAGE_ENGLISH)?OSD2IMG_CAMS_BRIGHTNESS_WORD:
@@ -411,7 +418,8 @@ static void UI_CameraDrawSubSubSubMenuItem()
 										(tUI_CuSetting.tLanguage == LANGUAGE_FRENCH)?OSD2IMG_CAMS_BRIGHTNESS_WORD_FR:OSD2IMG_CAMS_BRIGHTNESS_WORD_CHN) + ubItemCurIdx, 1, &tOsdImgInfo[0]);
 		tOSD_Img2(&tOsdImgInfo[0],OSD_QUEUE);
 		//slider
-		tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_CAMS_BRIGHTNESS_SLIDER + ubItemCurIdx, 1, &tOsdImgInfo[0]);
+		tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_CAMS_BRIGHTNESS_SLIDER, 1, &tOsdImgInfo[0]);
+		tOsdImgInfo[0].uwYStart = CAMERA_SLIDER_Y + CAMERA_Y_STEP*ubItemCurIdx;
 		tOSD_Img2(&tOsdImgInfo[0],OSD_QUEUE);
 		//round
 		tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_CAMS_ROUND_HL, 1, &tOsdImgInfo[1]);
@@ -1319,7 +1327,17 @@ void UI_ParkingLineSubSubSubMenuPageExit()
 		tOSD_Img2(&tOsdImgInfo[i], OSD_QUEUE);
 	
 	//enablr or disable
-	tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_PARKINGLINE_CAM1_DIS_NOR, 24, &tOsdImgInfo[0]);
+	tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_AUTOSCAN_OFF_CAM1_NOR, 4, &tOsdImgInfo[0]);
+	for(uint8_t i = 0;i < 4;i++)
+	{
+		for(uint8_t j = 0;j < 4;j++)
+		{
+			tOsdImgInfo[6*i + j] = tOsdImgInfo[j];
+			tOsdImgInfo[6*i + j].uwXStart = PARKINGLINE_SWITCH_X + PARKINGLINE_X_STEP*(i%2);
+			tOsdImgInfo[6*i + j].uwYStart = PARKINGLINE_SWITCH_Y + PARKINGLINE_Y_STEP*(i/2);
+		}
+		tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_PARKINGLINE_CAM1_AUTO_NOR + 2*i, 2, &tOsdImgInfo[6*i + 4]);
+	}
 	for(uint8_t i = 0;i < 4;i++)
 		tOSD_Img2(&tOsdImgInfo[6*i + 2*tUI_CuSetting.tParkingLineEnable[i]], OSD_QUEUE); 
 	//CALIBRATE
@@ -1539,7 +1557,17 @@ void UI_GuideLineSubSubSubMenuPageExit(void)
 
 	
 	//enablr or disable
-	tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_PARKINGLINE_CAM1_DIS_NOR, 24, &tOsdImgInfo[0]);
+	tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_AUTOSCAN_OFF_CAM1_NOR, 4, &tOsdImgInfo[0]);
+	for(uint8_t i = 0;i < 4;i++)
+	{
+		for(uint8_t j = 0;j < 4;j++)
+		{
+			tOsdImgInfo[6*i + j] = tOsdImgInfo[j];
+			tOsdImgInfo[6*i + j].uwXStart = PARKINGLINE_SWITCH_X + PARKINGLINE_X_STEP*(i%2);
+			tOsdImgInfo[6*i + j].uwYStart = PARKINGLINE_SWITCH_Y + PARKINGLINE_Y_STEP*(i/2);
+		}
+		tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_PARKINGLINE_CAM1_AUTO_NOR + 2*i, 2, &tOsdImgInfo[6*i + 4]);
+	}
 	for(uint8_t i = 0;i < 4;i++)
 		tOSD_Img2(&tOsdImgInfo[6*i + 2*tUI_CuSetting.GuideLineEnable[i]], OSD_QUEUE); 
 	//CALIBRATE
@@ -2020,7 +2048,14 @@ static void UI_TriggerSubSubSubMenuExit(uint16_t uwSubSubMenuItemIdx)
 	}
 
 	//button
-	tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_TRIGGER_DELAY_CAM1_NOR, 22, &tOsdImgInfo_Button[0]);
+	tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_DATE_TIME_YEAR_NOR, 2, &tOsdImgInfo_Button[0]);
+	for(uint8_t i = 0;i < 10;i++)
+	{
+		tOsdImgInfo_Button[2*i] = tOsdImgInfo_Button[0];
+		tOsdImgInfo_Button[2*i + 1] = tOsdImgInfo_Button[1];
+		tOsdImgInfo_Button[2*i].uwXStart = tOsdImgInfo_Button[2*i + 1].uwXStart = TRIGGER_X + TRIGGER_X_STEP*(i%5);
+		tOsdImgInfo_Button[2*i].uwYStart = tOsdImgInfo_Button[2*i + 1].uwYStart = TRIGGER_Y + TRIGGER_Y_STEP*(i/5);
+	}
 	tOSD_GetOsdImgInfor(1, OSD_IMG2, (tUI_CuSetting.tLanguage == LANGUAGE_ENGLISH)?OSD2IMG_TRIGGER_DISPLAY_SETUP_NOR:
 									(tUI_CuSetting.tLanguage == LANGUAGE_GERMAN)?OSD2IMG_TRIGGER_DISPLAY_SETUP_NOR_GER:
 									(tUI_CuSetting.tLanguage == LANGUAGE_FRENCH)?OSD2IMG_TRIGGER_DISPLAY_SETUP_NOR_FR:OSD2IMG_TRIGGER_DISPLAY_SETUP_NOR_CHN, 2, &tOsdImgInfo_Button[20]);	
@@ -2082,7 +2117,14 @@ static void UI_AutoScanSubSubSubMenuExit(uint16_t uwSubSubMenuItemIdx)
 		tOSD_Img2(&tOsdImgInfo[i], OSD_QUEUE);
 
 	//delay
-	tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_AUTOSCAN_DELAY_CAM1_NOR, 12, &tOsdImgInfo[0]);
+	tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_DATE_TIME_YEAR_NOR, 2, &tOsdImgInfo[0]);
+	for(uint8_t i = 0;i < 6;i++)
+	{
+		tOsdImgInfo[2*i] = tOsdImgInfo[0];
+		tOsdImgInfo[2*i + 1] = tOsdImgInfo[1];
+		tOsdImgInfo[2*i].uwXStart = tOsdImgInfo[2*i + 1].uwXStart = AUTOSCAN_DELAY_X + AUTO_SCAN_OFF_DIST_X*(i%2);
+		tOsdImgInfo[2*i].uwYStart = tOsdImgInfo[2*i + 1].uwYStart = AUTOSCAN_DELAY_Y + AUTO_SCAN_OFF_DIST_Y*(i/2);
+	}
 	for(uint8_t i = 0;i < 6;i++)
 		tOSD_Img2(&tOsdImgInfo[2*i], OSD_QUEUE);
 
@@ -2104,7 +2146,14 @@ static void UI_AutoScanSubSubSubMenuExit(uint16_t uwSubSubMenuItemIdx)
 //			tOSD_Img2(&tOsdImgInfo[2 + 4*i],OSD_QUEUE);
 //	}
 	//highLight
-	tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_AUTOSCAN_DELAY_CAM1_NOR, 12, &tOsdImgInfo[0]);
+	tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_DATE_TIME_YEAR_NOR, 2, &tOsdImgInfo[0]);
+	for(uint8_t i = 0;i < 6;i++)
+	{
+		tOsdImgInfo[2*i] = tOsdImgInfo[0];
+		tOsdImgInfo[2*i + 1] = tOsdImgInfo[1];
+		tOsdImgInfo[2*i].uwXStart = tOsdImgInfo[2*i + 1].uwXStart = AUTOSCAN_DELAY_X + AUTO_SCAN_OFF_DIST_X*(i%2);
+		tOsdImgInfo[2*i].uwYStart = tOsdImgInfo[2*i + 1].uwYStart = AUTOSCAN_DELAY_Y + AUTO_SCAN_OFF_DIST_Y*(i/2);
+	}
 	tOSD_Img2(&tOsdImgInfo[2*CamIdx + UI_ICON_HIGHLIGHT], OSD_QUEUE);
 	UI_ShowButtonValueHighLight(tUI_CuSetting.AutoScanDuty[CamIdx],
 		tOsdImgInfo[2*CamIdx].uwXStart + ((tUI_CuSetting.AutoScanDuty[CamIdx] < 10)?40:30),tOsdImgInfo[2*CamIdx].uwYStart + 15,OSD_UPDATE);		
@@ -2582,6 +2631,9 @@ void UI_SubSubSubTouchMenu(TOUCH_EVENT_t *Touch_Info)
 					case PARKINGLINE_ITEM:
 						UI_ParkingLIneSubSubSubTouchMenu(Touch_Info);
 						break;
+					case AI_ITEM:
+						UI_AISubSubSubTouchMenu(Touch_Info);
+						break;
 					case GUIDELINE_ITEM:
 						UI_GuideLineSubSubSubTouchMenu(Touch_Info);
 						break;
@@ -2765,7 +2817,8 @@ void UI_CameraSubSubSubTouchMenu(TOUCH_EVENT_t *Touch_Info)
 	
 				for(i = 0;i < 5;i++)
 				{
-					tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_CAMS_BRIGHTNESS_SLIDER + i,1,&tOsdImgInfo);
+					tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_CAMS_BRIGHTNESS_SLIDER,1,&tOsdImgInfo);
+					tOsdImgInfo.uwYStart = CAMERA_SLIDER_Y + CAMERA_Y_STEP*i;
 					if(Touch_Info->endX >= tOsdImgInfo.uwXStart - 50 
 						&& Touch_Info->endX <= tOsdImgInfo.uwXStart + tOsdImgInfo.uwHSize + 50
 						&& Touch_Info->endY >= tOsdImgInfo.uwYStart - 10
@@ -3370,6 +3423,260 @@ void UI_SettingSubSubSubTouchMenu(TOUCH_EVENT_t *Touch_Info)
 			return;
 	}
 
+}
+
+
+static uint8_t ubAIRangeCam, ubAIRangeItem, ubAIRangePoint, ubAIRangeSelected;
+static UI_LinePoint_t tAIRangeHandle[AI_RANGE_HANDLE_MAX];
+
+static void UI_AIDrawRangeLine(int16_t x1, int16_t y1, int16_t x2, int16_t y2, OSD_IMG_INFO *ptOsdImgInfo, uint8_t ubHorizontal, OSD_LAYER_TYP tOsdLayer)
+{
+	int16_t dx = abs(x2 - x1), dy = abs(y2 - y1);
+	int16_t xmid, ymid;
+	if(ubHorizontal)
+	{
+		if(dx < 4 && dy < 4)
+			return;
+		xmid = ((x1 < x2)?x1:x2) + dx/2;
+		ymid = ((y1 < y2)?y1:y2) + dy/2;
+	}
+	else
+	{
+		if(dx*dx + dy*dy < 16)
+			return;
+		xmid = x1 + (x2 - x1)/2;
+		ymid = y1 + (y2 - y1)/2;
+	}
+	ptOsdImgInfo->uwXStart = xmid;
+	ptOsdImgInfo->uwYStart = ymid;
+	if(tOsdLayer == OSD_IMG1)
+		tOSD_Img1_NoCopy(ptOsdImgInfo, OSD_QUEUE);
+	else
+		tOSD_Img2(ptOsdImgInfo, OSD_QUEUE);
+	UI_AIDrawRangeLine(x1, y1, xmid, ymid, ptOsdImgInfo, ubHorizontal, tOsdLayer);
+	UI_AIDrawRangeLine(xmid, ymid, x2, y2, ptOsdImgInfo, ubHorizontal, tOsdLayer);
+}
+
+void UI_AIDrawRangeLines(UI_LinePoint_t tLinePoint[4][2], OSD_LAYER_TYP tOsdLayer)
+{
+	OSD_IMG_INFO tOsdImgInfo;
+	uint16_t uwImage[3] = {OSD2IMG_AI_RANGE_GREEN, OSD2IMG_AI_RANGE_YELLOW, OSD2IMG_AI_RANGE_RED};
+	for(uint8_t i = 0;i < 3;i++)
+	{
+		tOSD_GetOsdImgInfor(1, OSD_IMG2, uwImage[i], 1, &tOsdImgInfo);
+		if(i == 0)
+			UI_AIDrawRangeLine(tLinePoint[0][0].xPoint, tLinePoint[0][0].yPoint, tLinePoint[0][1].xPoint, tLinePoint[0][1].yPoint, &tOsdImgInfo, TRUE, tOsdLayer);
+		for(uint8_t j = 0;j < 2;j++)
+			UI_AIDrawRangeLine(tLinePoint[i][j].xPoint, tLinePoint[i][j].yPoint, tLinePoint[i + 1][j].xPoint, tLinePoint[i + 1][j].yPoint, &tOsdImgInfo, FALSE, tOsdLayer);
+		UI_AIDrawRangeLine(tLinePoint[i + 1][0].xPoint, tLinePoint[i + 1][0].yPoint, tLinePoint[i + 1][1].xPoint, tLinePoint[i + 1][1].yPoint, &tOsdImgInfo, TRUE, tOsdLayer);
+	}
+}
+
+static void UI_AIDrawRange(void)
+{
+	OSD_IMG_INFO tOsdImgInfo;
+	UI_LinePoint_t tLinePoint[4][2];
+	UI_ParkinglinePoint_t tRange = tUI_CuSetting.tUI_AIDetectlinePoint[ubAIRangeCam];
+	UI_LinePoint_t *ptPoint[AI_RANGE_POINT_MAX] = {
+		&tRange.tupLeft, &tRange.tupRight, &tRange.tdownLeft, &tRange.tdownRight
+	};
+	uint16_t uwButton[AI_RANGE_ITEM_MAX] = {
+		OSD2IMG_CAMS_H_MIRROR_OFF_NOR + 2*tUI_CuSetting.ubIsEnableBSDRANGE[ubAIRangeCam],
+		OSD2IMG_AI_CHOOSE_UP_NOR, OSD2IMG_AI_CHOOSE_LEFT_NOR, OSD2IMG_AI_CHOOSE_OK_NOR,
+		OSD2IMG_AI_CHOOSE_RIGHT_NOR, OSD2IMG_AI_CHOOSE_DOWN_NOR, OSD2IMG_AI_RESET_NOR
+	};
+	tOSD_GetOsdImgInfor(1, OSD_IMG1, OSD1IMG_SUBMENU2, 1, &tOsdImgInfo);
+	OSD_EraserImg1_NOUpdate(&tOsdImgInfo);
+	for(uint8_t i = 0;i < AI_RANGE_POINT_MAX;i++)
+	{
+		uint8_t ubPosition = (i == 0)?0:(i == 3)?AI_RANGE_LINE_STEPS:((i == 1)?tUI_CuSetting.tLocation1[ubAIRangeCam]:tUI_CuSetting.tLocation2[ubAIRangeCam]);
+		for(uint8_t j = 0;j < 2;j++)
+		{
+			tLinePoint[i][j].xPoint = ptPoint[j]->xPoint + (ptPoint[j + 2]->xPoint - ptPoint[j]->xPoint)*ubPosition/AI_RANGE_LINE_STEPS;
+			tLinePoint[i][j].yPoint = ptPoint[j]->yPoint + (ptPoint[j + 2]->yPoint - ptPoint[j]->yPoint)*ubPosition/AI_RANGE_LINE_STEPS;
+		}
+	}
+	UI_AIDrawRangeLines(tLinePoint, OSD_IMG2);
+	for(uint8_t i = 0;i < AI_RANGE_HANDLE_MAX;i++)
+	{
+		if(i < AI_RANGE_POINT_MAX)
+		{
+			tAIRangeHandle[i] = *ptPoint[i];
+		}
+		else
+		{
+			uint8_t ubLine = (i == 4)?1:2;
+			tAIRangeHandle[i].xPoint = (tLinePoint[ubLine][0].xPoint + tLinePoint[ubLine][1].xPoint)/2;
+			tAIRangeHandle[i].yPoint = tLinePoint[ubLine][0].yPoint;
+			if(i == 6)
+			{
+				tAIRangeHandle[i].xPoint = (tAIRangeHandle[5].xPoint - tAIRangeHandle[4].xPoint)/2 + tAIRangeHandle[4].xPoint;
+				tAIRangeHandle[i].yPoint = (tAIRangeHandle[5].yPoint - tAIRangeHandle[4].yPoint)/2 + tAIRangeHandle[4].yPoint;
+			}
+		}
+		if(i == ubAIRangePoint)
+		{
+			tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_AI_POINT_UNSELECT + ubAIRangeSelected, 1, &tOsdImgInfo);
+			int16_t X_temp = tAIRangeHandle[i].xPoint - tOsdImgInfo.uwHSize/2;
+			int16_t Y_temp = tAIRangeHandle[i].yPoint - tOsdImgInfo.uwVSize/2;
+			if(X_temp < 0)
+				X_temp = 0;
+			else if(X_temp > OSD_WIDTH - tOsdImgInfo.uwHSize)
+				X_temp = OSD_WIDTH - tOsdImgInfo.uwHSize;
+			if(Y_temp < 0)
+				Y_temp = 0;
+			else if(Y_temp > OSD_HEIGHT - tOsdImgInfo.uwVSize)
+				Y_temp = OSD_HEIGHT - tOsdImgInfo.uwVSize;
+			tOsdImgInfo.uwXStart = X_temp;
+			tOsdImgInfo.uwYStart = Y_temp;
+			tOSD_Img2(&tOsdImgInfo, OSD_QUEUE);
+		}
+	}
+	for(uint8_t i = 0;i < AI_RANGE_ITEM_MAX;i++)
+	{
+		tOSD_GetOsdImgInfor(1, OSD_IMG2, uwButton[i] + (i == ubAIRangeItem), 1, &tOsdImgInfo);
+		if(i == AI_RANGE_ENABLE)
+		{
+			tOsdImgInfo.uwXStart = 30;
+			tOsdImgInfo.uwYStart = 20;
+		}
+		tOSD_Img2(&tOsdImgInfo, OSD_QUEUE);
+	}
+	if(ubUI_TouchPanelSts)
+	{
+		tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_RETURN_NOBACKGROUND_NOR, 1, &tOsdImgInfo);
+		tOSD_Img2(&tOsdImgInfo, OSD_QUEUE);
+	}
+	OSD_UpdateImg2();
+}
+
+void UI_AIEnterRange(uint8_t ubCam)
+{
+	ubAIRangeCam = ubCam;
+	ubAIRangeItem = AI_RANGE_ENABLE;
+	ubAIRangePoint = 0;
+	ubAIRangeSelected = FALSE;
+	UI_SwitchViewType((UI_CamNum_t)ubCam, TRUE);
+	tUI_State = UI_SUBSUBSUBMENU_STATE;
+	UI_AIDrawRange();
+}
+
+void UI_AISubSubSubMenuPage(UI_ArrowKey_t tArrowKey)
+{
+	if(tArrowKey == EXIT_ARROW)
+	{
+		UI_UpdateDevStatusInfo();
+		UI_SwitchViewType(DeskTopShowView, FALSE);
+		UI_AISubMenuExecute();
+		return;
+	}
+	if(tArrowKey == LEFT_ARROW)
+		ubAIRangeItem = (ubAIRangeItem == 0)?AI_RANGE_ITEM_MAX - 1:ubAIRangeItem - 1;
+	else if(tArrowKey == RIGHT_ARROW)
+		ubAIRangeItem = (ubAIRangeItem + 1)%AI_RANGE_ITEM_MAX;
+	else if(tArrowKey == ENTER_ARROW)
+	{
+		if(ubAIRangeItem == AI_RANGE_ENABLE)
+			tUI_CuSetting.ubIsEnableBSDRANGE[ubAIRangeCam] = 1 - tUI_CuSetting.ubIsEnableBSDRANGE[ubAIRangeCam];
+		else if(ubAIRangeItem == AI_RANGE_RESET)
+		{
+			tUI_CuSetting.tUI_AIDetectlinePoint[ubAIRangeCam] = (UI_ParkinglinePoint_t)AI_RANGE_DEFAULT_POINT;
+			tUI_CuSetting.tLocation1[ubAIRangeCam] = AI_RANGE_DEFAULT_LINE1;
+			tUI_CuSetting.tLocation2[ubAIRangeCam] = AI_RANGE_DEFAULT_LINE2;
+			ubAIRangePoint = 0;
+			ubAIRangeSelected = FALSE;
+		}
+		else if(ubAIRangeItem == AI_RANGE_OK)
+			ubAIRangeSelected = 1 - ubAIRangeSelected;
+		else if(!ubAIRangeSelected)
+			ubAIRangePoint = (ubAIRangePoint + ((ubAIRangeItem == AI_RANGE_LEFT || ubAIRangeItem == AI_RANGE_UP)?AI_RANGE_HANDLE_MAX - 1:1))%AI_RANGE_HANDLE_MAX;
+		else if(ubAIRangePoint == 4 || ubAIRangePoint == 5)
+		{
+			uint8_t *pubLocation = (ubAIRangePoint == 4)?&tUI_CuSetting.tLocation1[ubAIRangeCam]:&tUI_CuSetting.tLocation2[ubAIRangeCam];
+			int16_t ubPosition = *pubLocation +
+				((ubAIRangeItem == AI_RANGE_LEFT || ubAIRangeItem == AI_RANGE_UP)?-1:1);
+			if(ubPosition > 0 && ubPosition < AI_RANGE_LINE_STEPS && (ubAIRangePoint == 4?
+				ubPosition < tUI_CuSetting.tLocation2[ubAIRangeCam]:ubPosition > tUI_CuSetting.tLocation1[ubAIRangeCam]))
+				*pubLocation = ubPosition;
+		}
+		else
+		{
+			UI_ParkinglinePoint_t tRange = tUI_CuSetting.tUI_AIDetectlinePoint[ubAIRangeCam];
+			UI_LinePoint_t *ptPoint[AI_RANGE_POINT_MAX] = {
+				&tRange.tupLeft, &tRange.tupRight, &tRange.tdownLeft, &tRange.tdownRight
+			};
+			int16_t dx = (ubAIRangeItem == AI_RANGE_LEFT)?-AI_RANGE_MOVE_STEP:(ubAIRangeItem == AI_RANGE_RIGHT)?AI_RANGE_MOVE_STEP:0;
+			int16_t dy = (ubAIRangeItem == AI_RANGE_UP)?-AI_RANGE_MOVE_STEP:(ubAIRangeItem == AI_RANGE_DOWN)?AI_RANGE_MOVE_STEP:0;
+			uint8_t ubValid = TRUE;
+			for(uint8_t i = 0;i < AI_RANGE_POINT_MAX;i++)
+			{
+				if(ubAIRangePoint == 6 && ((dx < 0 && ptPoint[i]->xPoint <= AI_RANGE_MOVE_STEP) ||
+					(dx > 0 && ptPoint[i]->xPoint >= OSD_WIDTH - AI_RANGE_MOVE_STEP)))
+					ubValid = FALSE;
+				if(i == ubAIRangePoint || ubAIRangePoint == 6)
+				{
+					ptPoint[i]->xPoint += dx;
+					if(ptPoint[i]->xPoint < 0)
+						ptPoint[i]->xPoint -= dx;
+					if(ptPoint[i]->xPoint > OSD_WIDTH - AI_RANGE_MOVE_STEP)
+						ptPoint[i]->xPoint = OSD_WIDTH - AI_RANGE_MOVE_STEP;
+				}
+				if(i/2 == ubAIRangePoint/2 || ubAIRangePoint == 6)
+					ptPoint[i]->yPoint += dy;
+			}
+			if(tRange.tupLeft.yPoint < 0 || tRange.tdownLeft.yPoint > OSD_HEIGHT - 4 ||
+				tRange.tdownLeft.yPoint < tRange.tupLeft.yPoint)
+				ubValid = FALSE;
+			if(ubValid)
+				tUI_CuSetting.tUI_AIDetectlinePoint[ubAIRangeCam] = tRange;
+		}
+	}
+	else
+		return;
+	UI_AIDrawRange();
+}
+
+void UI_AISubSubSubTouchMenu(TOUCH_EVENT_t *Touch_Info)
+{
+	OSD_IMG_INFO tOsdImgInfo;
+	uint16_t uwButton[AI_RANGE_ITEM_MAX] = {OSD2IMG_CAMS_H_MIRROR_OFF_NOR, OSD2IMG_AI_CHOOSE_UP_NOR,
+		OSD2IMG_AI_CHOOSE_LEFT_NOR, OSD2IMG_AI_CHOOSE_OK_NOR, OSD2IMG_AI_CHOOSE_RIGHT_NOR,
+		OSD2IMG_AI_CHOOSE_DOWN_NOR, OSD2IMG_AI_RESET_NOR};
+	if(Touch_Info->Gesture != TOUCH_PRESS)
+		return;
+	for(uint8_t i = 0;i < AI_RANGE_ITEM_MAX;i++)
+	{
+		tOSD_GetOsdImgInfor(1, OSD_IMG2, uwButton[i], 1, &tOsdImgInfo);
+		if(i == AI_RANGE_ENABLE)
+		{
+			tOsdImgInfo.uwXStart = 30;
+			tOsdImgInfo.uwYStart = 20;
+		}
+		if(Touch_Info->startX > tOsdImgInfo.uwXStart && Touch_Info->startX < tOsdImgInfo.uwXStart + tOsdImgInfo.uwHSize &&
+			Touch_Info->startY > tOsdImgInfo.uwYStart && Touch_Info->startY < tOsdImgInfo.uwYStart + tOsdImgInfo.uwVSize)
+		{
+			ubAIRangeItem = i;
+			UI_AISubSubSubMenuPage(ENTER_ARROW);
+			return;
+		}
+	}
+	tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_RETURN_NOBACKGROUND_HL, 1, &tOsdImgInfo);
+	if(Touch_Info->startX > tOsdImgInfo.uwXStart && Touch_Info->startX < tOsdImgInfo.uwXStart + tOsdImgInfo.uwHSize &&
+		Touch_Info->startY > tOsdImgInfo.uwYStart && Touch_Info->startY < tOsdImgInfo.uwYStart + tOsdImgInfo.uwVSize)
+	{
+		UI_AISubSubSubMenuPage(EXIT_ARROW);
+		return;
+	}
+	for(uint8_t i = 0;i < AI_RANGE_HANDLE_MAX;i++)
+	{
+		if(abs((int)Touch_Info->startX - tAIRangeHandle[i].xPoint) < 24 && abs((int)Touch_Info->startY - tAIRangeHandle[i].yPoint) < 24)
+		{
+			ubAIRangePoint = i;
+			ubAIRangeSelected = TRUE;
+			UI_AIDrawRange();
+			return;
+		}
+	}
 }
 
 #endif

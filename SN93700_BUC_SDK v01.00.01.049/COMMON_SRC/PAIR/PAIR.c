@@ -47,6 +47,20 @@ uint8_t ubPAIR_InPairIngFlg = 0;
 uint32_t        ulPAIR_Timeout, ulPAIR_TimeCnt;
 uint8_t         ubPAIR_State, ubPAIR_Number;
 osThreadId      PAIR_ThreadId;
+#if OP_AP && defined(RTC676x)
+// Each slot keeps only its latest configuration until the TX echoes it.
+typedef struct
+{
+	uint32_t ulId, ulSendTick;
+	uint8_t ubPending, ubRetry;
+	uint8_t ubConfig[32];
+}PAIR_Hdw24gConfig_t;
+static PAIR_Hdw24gConfig_t tPAIR_Hdw24gConfig[4];
+static uint32_t ulPAIR_Hdw24gConfigSeq;
+static osMutexId osPAIR_Hdw24gConfigMutex;
+static void PAIR_Hdw24gConfigSendStatus(TWC_TAG tStaNum, TWC_STATUS tStatus);
+static void PAIR_RecvHdw24gConfig(TWC_TAG tStaNum, uint8_t *pData);
+#endif
 osMessageQId    *xAppEventQueue;
 PAIR_RRP_Hdr    PAIR_PrpPket;
 PAIR_RAP_Hdr    PAIR_PapPket;
@@ -471,6 +485,12 @@ void PAIR_Init(osMessageQId *pvMsgQId)
 		printf("Register Pair PRP TWC Fail !\n");
     if(tTWC_RegTransCbFunc(TWC_PAAP, NULL, PAIR_Paap) == TWC_FAIL)
 		printf("Register Pair PAAP TWC Fail !\n");
+#ifdef RTC676x
+	osMutexDef(PAIR_Hdw24gConfigMutex);
+	osPAIR_Hdw24gConfigMutex = osMutexCreate(osMutex(PAIR_Hdw24gConfigMutex));
+	if(tTWC_RegTransCbFunc(TWC_CONFIG_SYNC, PAIR_Hdw24gConfigSendStatus, PAIR_RecvHdw24gConfig) != TWC_SUCCESS)
+		printf("Register CONFIG_SYNC TWC Fail !\n");
+#endif
 	tPAIR_DelStaNum = PAIR_AP_ASSIGN;
 #endif
 	
@@ -595,7 +615,12 @@ void PAIR_SetDevInvaildId(PAIR_TAG tTag)
 #ifdef RTC676x
 	// 删除配对时同时清除此槽的机型标记，防止下一台 CAM 继承 800x448 限制。
 	if(tTag <= PAIR_STA4)
+	{
 		PAIR_IdTable.ubHdwFlags &= ~(1 << tTag);
+#if OP_AP
+		PAIR_ClearHdw24gConfig(tTag);
+#endif
+	}
 #endif
 	switch(tTag)
 	{
@@ -645,18 +670,90 @@ uint8_t PAIR_IsHdw24gCam(PAIR_TAG tStaNum)
 	return FALSE;
 }
 #if OP_AP && defined(RTC676x)
-void PAIR_SyncHdw24gCaps(PAIR_TAG tStaNum, uint8_t ubAlgEnable)
+static void PAIR_Hdw24gConfigSendStatus(TWC_TAG tStaNum, TWC_STATUS tStatus)
 {
-	PAIR_RAP_Hdr tPap;
-	TWC_STATUS tTwcSts;
-	uint32_t ulId;
+	// This is the RF ACK, not confirmation that the TX applied the config.
+	printf("[HDW24G][CONFIG-ACK] cam=%u %s\r\n",
+		tStaNum + 1, tStatus == TWC_SUCCESS ? "ok" : "fail");
+}
+static void PAIR_RecvHdw24gConfig(TWC_TAG tStaNum, uint8_t *pData)
+{
+	PAIR_Hdw24gConfig_t *pConfig;
+	if(tStaNum > TWC_STA4)
+		return;
+	osMutexWait(osPAIR_Hdw24gConfigMutex, osWaitForever);
+	pConfig = &tPAIR_Hdw24gConfig[tStaNum];
+	if(pConfig->ubPending && !ubPAIR_InPairIngFlg && ubPAIR_State < PAIR_START &&
+		!ubKNL_GetStopTrxFlg() && PAIR_IsHdw24gCam((PAIR_TAG)tStaNum) &&
+		pConfig->ulId == ulKNL_GetSlaveId(tStaNum) &&
+		pConfig->ulId == PAIR_IdTable.ulSTA_ID[tStaNum] &&
+		rf_get_link_status(pConfig->ulId) &&
+		!memcmp(pConfig->ubConfig, pData, sizeof(pConfig->ubConfig)))
+	{
+		pConfig->ubPending = FALSE;
+		printf("[HDW24G][CONFIG-CONFIRMED] cam=%u id=%08X flags=%u\r\n",
+			tStaNum + 1, pConfig->ulId, pData[1]);
+	}
+	osMutexRelease(osPAIR_Hdw24gConfigMutex);
+}
+void PAIR_ClearHdw24gConfig(PAIR_TAG tStaNum)
+{
+	if(tStaNum > PAIR_STA4)
+		return;
+	osMutexWait(osPAIR_Hdw24gConfigMutex, osWaitForever);
+	memset(&tPAIR_Hdw24gConfig[tStaNum], 0, sizeof(tPAIR_Hdw24gConfig[tStaNum]));
+	osMutexRelease(osPAIR_Hdw24gConfigMutex);
+}
+void PAIR_Hdw24gConfigPoll(void)
+{
+	PAIR_Hdw24gConfig_t *pConfig;
+	uint8_t ubSta;
+	for(ubSta = 0; ubSta < 4; ubSta++)
+	{
+		osMutexWait(osPAIR_Hdw24gConfigMutex, osWaitForever);
+		pConfig = &tPAIR_Hdw24gConfig[ubSta];
+		if(pConfig->ubPending)
+		{
+			if(ubPAIR_InPairIngFlg || ubPAIR_State >= PAIR_START || ubKNL_GetStopTrxFlg() ||
+				pConfig->ulId != ulKNL_GetSlaveId(ubSta) ||
+				pConfig->ulId != PAIR_IdTable.ulSTA_ID[ubSta] ||
+				!PAIR_IsHdw24gCam((PAIR_TAG)ubSta) || !rf_get_link_status(pConfig->ulId))
+				pConfig->ubPending = FALSE;
+			else if((uint32_t)(osKernelSysTick() - pConfig->ulSendTick) >= 2 * osKernelSysTickFrequency)
+			{
+				if(pConfig->ubRetry)
+				{
+					pConfig->ubRetry--;
+					tTWC_Send((TWC_TAG)ubSta, TWC_CONFIG_SYNC, pConfig->ubConfig, sizeof(pConfig->ubConfig), 3);
+					pConfig->ulSendTick = osKernelSysTick();
+				}
+				else
+				{
+					pConfig->ubPending = FALSE;
+					printf("[HDW24G][CONFIG-TIMEOUT] cam=%u id=%08X\r\n", ubSta + 1, pConfig->ulId);
+				}
+			}
+		}
+		osMutexRelease(osPAIR_Hdw24gConfigMutex);
+	}
+}
+void PAIR_SyncHdw24gCaps(PAIR_TAG tStaNum, uint8_t ubAlgEnable, const uint8_t *pCursor)
+{
+	PAIR_Hdw24gConfig_t *pConfig;
+	uint32_t ulId, ulSeq;
+	uint8_t i;
 	// 在线版本只补齐已配对的原槽位，不生成 ID，也不改变配对状态。
-	if(tStaNum > PAIR_STA4 || ubPAIR_InPairIngFlg || ubPAIR_State >= PAIR_START)
+	if(tStaNum > PAIR_STA4)
 		return;
+	osMutexWait(osPAIR_Hdw24gConfigMutex, osWaitForever);
 	ulId = ulKNL_GetSlaveId(tStaNum);
-	if(!ulId || ulId == 0xFFFFFFFF || ulId == PAIR_INVALID_ID ||
+	if(ubPAIR_InPairIngFlg || ubPAIR_State >= PAIR_START || ubKNL_GetStopTrxFlg() ||
+		!ulId || ulId == 0xFFFFFFFF || ulId == PAIR_INVALID_ID ||
 		ulId != PAIR_IdTable.ulSTA_ID[tStaNum] || !rf_get_link_status(ulId))
+	{
+		osMutexRelease(osPAIR_Hdw24gConfigMutex);
 		return;
+	}
 	if(!PAIR_IsHdw24gCam(tStaNum))
 	{
 		PAIR_IdTable.ubHdwSign[0] = PAIR_HDW24G_SIGN1;
@@ -664,19 +761,26 @@ void PAIR_SyncHdw24gCaps(PAIR_TAG tStaNum, uint8_t ubAlgEnable)
 		PAIR_IdTable.ubHdwFlags |= (1 << tStaNum);
 		PAIR_SaveId();
 	}
-	// 复用 PAP 的原有布局同步能力；只修改副本的能力字段和目标槽号。
-	memcpy(&tPap, &PAIR_IdTable, sizeof(tPap));
-	tPap.ubTxNumber = tStaNum;
-	tPap.ubHdwSign[0] = PAIR_HDW24G_SIGN0;
-	tPap.ubHdwSign[1] = PAIR_HDW24G_SIGN1;
-	tPap.ubHdwFlags = 0;
+	// A new request replaces the old pending config; retries keep the same sequence.
+	pConfig = &tPAIR_Hdw24gConfig[tStaNum];
+	memset(pConfig, 0, sizeof(*pConfig));
+	pConfig->ulId = ulId;
+	pConfig->ubConfig[0] = TWC_CONFIG_SYNC_VERSION;
+	memcpy(pConfig->ubConfig + 2, pCursor, 24);
 #ifdef BSP_D_SNCC71_GM8285C_RX_V2
 	if(ubAlgEnable)
-		tPap.ubHdwFlags = PAIR_HDW24G_ALG_PACKET;
+		pConfig->ubConfig[1] = PAIR_HDW24G_ALG_PACKET;
 #endif
-	tTwcSts = tTWC_Send((TWC_TAG)tStaNum, TWC_PAP, (uint8_t *)&tPap, sizeof(tPap), 3);
-	printf("[HDW24G][PAIR-SYNC] cam=%u id=%08X flags=%u %s\r\n",
-		tStaNum + 1, ulId, tPap.ubHdwFlags, tTwcSts == TWC_SUCCESS ? "ok" : "fail");
+	ulSeq = ++ulPAIR_Hdw24gConfigSeq;
+	for(i = 0; i < 4; i++)
+		pConfig->ubConfig[26 + i] = (uint8_t)(ulSeq >> (i * 8));
+	pConfig->ubPending = TRUE;
+	pConfig->ubRetry = 3;
+	tTWC_Send((TWC_TAG)tStaNum, TWC_CONFIG_SYNC, pConfig->ubConfig, sizeof(pConfig->ubConfig), 3);
+	pConfig->ulSendTick = osKernelSysTick();
+	printf("[HDW24G][CONFIG-SYNC] cam=%u id=%08X flags=%u seq=%u pending\r\n",
+		tStaNum + 1, ulId, pConfig->ubConfig[1], ulSeq);
+	osMutexRelease(osPAIR_Hdw24gConfigMutex);
 }
 #endif
 //------------------------------------------------------------------------------
@@ -714,6 +818,10 @@ uint8_t *PAIR_GetId(PAIR_TAG tPair_StaNum)
 void PAIR_Start(PAIR_TAG tPair_StaNum, uint32_t ulPair_Timeout, uint8_t ubPairTxPower)
 {
 	ubPAIR_InPairIngFlg = 1;
+#if OP_AP && defined(RTC676x)
+	for(uint8_t ubSta = 0; ubSta < 4; ubSta++)
+		PAIR_ClearHdw24gConfig((PAIR_TAG)ubSta);
+#endif
 #if( defined(T2R) && defined(A7130))	
 	PAIR_HopTimeStart();
 #endif	

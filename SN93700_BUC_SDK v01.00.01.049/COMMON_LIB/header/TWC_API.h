@@ -61,9 +61,15 @@ typedef enum
 	TWC_TX_VERSION,
 	TWC_ZOOM,
 	TWC_PELCO = 34,
+	TWC_CONFIG_SYNC = 35,
 //	............
 	TWC_USE63	= 63,	 
 }TWC_OPC;
+
+/* RX -> TX: version[0], RX flags[1], range[2], lines[3..4], steps[5],
+ * LE16 width/height[6..9], TL/TR/BL/BR x/y[10..25], LE32 sequence[26..29],
+ * reserved[30..31]. TX echoes all 32 bytes only after applying the config. */
+#define TWC_CONFIG_SYNC_VERSION 1u
 
 typedef enum
 {

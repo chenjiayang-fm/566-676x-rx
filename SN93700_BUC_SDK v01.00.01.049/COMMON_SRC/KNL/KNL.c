@@ -3899,30 +3899,30 @@ static void KNL_AdoEncMonitThread(void const *argument)
 		{
 			if(tKNL_AdoInfo.HwCompressMode == COMPRESS_ALAW)
 			{
-				printd(DBG_Debug3Lvl, "AdoEncQ(ALAW) : Addr:0x%x,SZ:0x%x\r\n",tAdoInfo.SrcAddr,tAdoInfo.SrcSize);
+				//printd(DBG_Debug3Lvl, "AdoEncQ(ALAW) : Addr:0x%x,SZ:0x%x\r\n",tAdoInfo.SrcAddr,tAdoInfo.SrcSize);
 			}
 			else if(tKNL_AdoInfo.HwCompressMode == COMPRESS_NONE)
 			{
-				printd(DBG_Debug3Lvl, "AdoEncQ(PCM) : Addr:0x%x,SZ:0x%x\r\n",tAdoInfo.SrcAddr,tAdoInfo.SrcSize);
+				//printd(DBG_Debug3Lvl, "AdoEncQ(PCM) : Addr:0x%x,SZ:0x%x\r\n",tAdoInfo.SrcAddr,tAdoInfo.SrcSize);
 			}
 			ulAddr = tAdoInfo.SrcAddr;
 			ulSize = tAdoInfo.SrcSize;
 		}
 		else if(tAdoInfo.EncType == ADO32)
 		{
-			printd(DBG_Debug3Lvl, "AdoEncQ(Audio32) : Addr:0x%x,SZ:0x%x\r\n",tAdoInfo.SrcAddr,tAdoInfo.SrcSize);
+			//printd(DBG_Debug3Lvl, "AdoEncQ(Audio32) : Addr:0x%x,SZ:0x%x\r\n",tAdoInfo.SrcAddr,tAdoInfo.SrcSize);
 			ulAddr = tAdoInfo.SrcAddr;
 			ulSize = tAdoInfo.SrcSize;
 		}
 		else if(tAdoInfo.EncType == ALAW)
 		{	
-			printd(DBG_Debug3Lvl, "AdoEncQ(Alaw) : Addr:0x%x,SZ:0x%x\r\n",tAdoInfo.SrcAddr,tAdoInfo.SrcSize);
+			//printd(DBG_Debug3Lvl, "AdoEncQ(Alaw) : Addr:0x%x,SZ:0x%x\r\n",tAdoInfo.SrcAddr,tAdoInfo.SrcSize);
 			ulAddr = tAdoInfo.SrcAddr;
 			ulSize = tAdoInfo.SrcSize;
 		}
 		else if(tAdoInfo.EncType == AAC)
 		{	
-			printd(DBG_Debug3Lvl, "AdoEncQ(AAC) : Addr:0x%x,SZ:0x%x\r\n",tAdoInfo.SrcAddr,tAdoInfo.SrcSize);
+			//printd(DBG_Debug3Lvl, "AdoEncQ(AAC) : Addr:0x%x,SZ:0x%x\r\n",tAdoInfo.SrcAddr,tAdoInfo.SrcSize);
 			ulAddr = tAdoInfo.SrcAddr;
 			ulSize = tAdoInfo.SrcSize;
 		}
@@ -5065,7 +5065,7 @@ void KNL_BufInit(void)
                 vREC_FileFormatSet(REC_FILE_MP4);
                 KNL_RecFileFormatConfigInit();
                 ulRecTime = ulREC_ModeSet(REC_MEM_MODE,ulResiMemSize);
-                printd(DBG_InfoLvl, "MaxRECTime %d minutes BufAddr:%x BufSz:%x \r\n", ulRecTime, ulRecStartAddr, ulResiMemSize);
+                //printd(DBG_InfoLvl, "MaxRECTime %d minutes BufAddr:%x BufSz:%x \r\n", ulRecTime, ulRecStartAddr, ulResiMemSize);
                 Media_Init(ulBUF_GetBlkBufAddr(0,BUF_REC));
                 printd(DBG_InfoLvl, "ulMedia_GetBufSz:0x%x\r\n", ulMedia_GetBufSz());
     
@@ -5267,7 +5267,7 @@ void KNL_BufInit(void)
 			vREC_FileFormatSet(REC_FILE_MP4);
 			KNL_RecFileFormatConfigInit();
 			ulRecTime = ulREC_ModeSet(REC_MEM_MODE,ulResiMemSize);
-			printd(DBG_InfoLvl, "MaxRECTime %d minutes BufAddr:%x BufSz:%x \r\n", ulRecTime, ulRecStartAddr, ulResiMemSize);
+			//printd(DBG_InfoLvl, "MaxRECTime %d minutes BufAddr:%x BufSz:%x \r\n", ulRecTime, ulRecStartAddr, ulResiMemSize);
 			Media_Init(ulBUF_GetBlkBufAddr(0,BUF_REC));
 			printd(DBG_InfoLvl, "ulMedia_GetBufSz:0x%x\r\n", ulMedia_GetBufSz());
 
@@ -5535,7 +5535,7 @@ void KNL_BufInit(void)
 		if(ubKNL_ExistNode(KNL_SRC_1_MAIN+i,KNL_NODE_VDO_BS_BUF1))
 		{
 			tNodeInfo = tKNL_GetNodeInfo(KNL_SRC_1_MAIN+i,KNL_NODE_VDO_BS_BUF1);
-			printd(DBG_InfoLvl, "	BS[%dx%d]\n", tNodeInfo.uwVdoH, tNodeInfo.uwVdoV);
+			//printd(DBG_InfoLvl, "	BS[%dx%d]\n", tNodeInfo.uwVdoH, tNodeInfo.uwVdoV);
 #if (defined(OP_AP) && defined(BSP_DVR_SDK))
             fBufSize = ( ((uint32_t)tNodeInfo.uwVdoH) * ((uint32_t)tNodeInfo.uwVdoV) * 1.5 )/KNL_MIN_COMPRESS_RATIO_LR;
 #else
@@ -6154,7 +6154,7 @@ void KNL_DpSwBufInit(void)
 		if(ubKNL_ExistNode(KNL_SRC_1_MAIN+i,KNL_NODE_VDO_BS_BUF1))
 		{
 			tNodeInfo = tKNL_GetNodeInfo(KNL_SRC_1_MAIN+i,KNL_NODE_VDO_BS_BUF1);
-			printd(DBG_InfoLvl, "	BS[%dx%d]\n", tNodeInfo.uwVdoH, tNodeInfo.uwVdoV);
+			//printd(DBG_InfoLvl, "	BS[%dx%d]\n", tNodeInfo.uwVdoH, tNodeInfo.uwVdoV);
 			if(ubKNL_GetAdjBufEnable())	
 				fBufSize = ( ((uint32_t)tNodeInfo.uwVdoH) * ((uint32_t)tNodeInfo.uwVdoV) * 1.5 )/KNL_MIN_COMPRESS_RATIO_ADJ;
 			else
@@ -11152,7 +11152,7 @@ uint8_t ubKNL_SetDispCropScaleParam(void)
 		{
 			if(tKNL_GetDispRotate() == KNL_DISP_ROTATE_90)
 			{
-				printd(DBG_Debug3Lvl, "Need to Add !!!!\r\n");
+				//printd(DBG_Debug3Lvl, "Need to Add !!!!\r\n");
 			}
 		}
 		pLcdCropScaleParam = (LCD_INFOR_TYP *)(&sLcdInfor);
@@ -11192,7 +11192,7 @@ uint8_t ubKNL_SetDispCropScaleParam(void)
 		{
 			if(tKNL_GetDispRotate() == KNL_DISP_ROTATE_90)
 			{
-				printd(DBG_Debug3Lvl, "Need to Add !!!!\r\n");
+				//printd(DBG_Debug3Lvl, "Need to Add !!!!\r\n");
 			}
 		}
 		pLcdCropScaleParam = (LCD_INFOR_TYP *)(&sLcdInfor);
@@ -11259,7 +11259,7 @@ uint8_t ubKNL_SetDispCropScaleParam(void)
 		{	
 			if(tKNL_GetDispRotate() == KNL_DISP_ROTATE_90)
 			{
-				printd(DBG_Debug3Lvl, "Need to Add !!!!\r\n");
+				//printd(DBG_Debug3Lvl, "Need to Add !!!!\r\n");
 			}			
 		}
 		pLcdCropScaleParam = (LCD_INFOR_TYP *)(&sLcdInfor);
@@ -11327,7 +11327,7 @@ uint8_t ubKNL_SetDispCropScaleParam(void)
 		{	
 			if(tKNL_GetDispRotate() == KNL_DISP_ROTATE_90)
 			{
-				printd(DBG_Debug3Lvl, "Need to Add !!!!\r\n");
+				//printd(DBG_Debug3Lvl, "Need to Add !!!!\r\n");
 			}			
 		}
 		pLcdCropScaleParam = (LCD_INFOR_TYP *)(&sLcdInfor);
@@ -12083,7 +12083,7 @@ uint8_t ubKNL_UpdateUvcImage(KNL_PROCESS tProc, KNL_NODE tCurNode)
 						ubResData[4] 	= tProc.ubSrcNum;
                         ubResData[5]    = 1;
 						KNL_VdoResSetting((TWC_TAG)TWC_STA1, ubResData);
-						printd(DBG_InfoLvl, "	->UVC Res: %d x %d\n", uwVdoHSize, uwVdoVSize);
+						//printd(DBG_InfoLvl, "	->UVC Res: %d x %d\n", uwVdoHSize, uwVdoVSize);
 						ubKNL_UvcChgResFlag = TRUE;
 					}
 					break;
@@ -12115,7 +12115,7 @@ uint8_t ubKNL_UpdateUvcImage(KNL_PROCESS tProc, KNL_NODE tCurNode)
 						ubResData[4] 	= tProc.ubSrcNum;
                         ubResData[5]    = 1;
 						KNL_VdoResSetting((TWC_TAG)TWC_STA1, ubResData);
-						printd(DBG_InfoLvl, "	->UVC Res: %d x %d\n", uwVdoHSize, uwVdoVSize);
+						//printd(DBG_InfoLvl, "	->UVC Res: %d x %d\n", uwVdoHSize, uwVdoVSize);
 						ubKNL_UvcChgResFlag = TRUE;
                         bYuvChgFlag = TRUE;
 					}
@@ -12153,7 +12153,7 @@ uint8_t ubKNL_UpdateUvcImage(KNL_PROCESS tProc, KNL_NODE tCurNode)
 					ubResData[4] = tProc.ubSrcNum;
                     ubResData[5] = 1;    
 					KNL_VdoResSetting((TWC_TAG)TWC_STA1, ubResData);
-					printd(DBG_InfoLvl, "	<-Img Res: %d x %d\n", uwKNL_ImgHSize, uwKNL_ImgVSize);
+					//printd(DBG_InfoLvl, "	<-Img Res: %d x %d\n", uwKNL_ImgHSize, uwKNL_ImgVSize);
 					ubKNL_UvcChgResFlag = FALSE;
 				}
 				if(!ubRC_GetFlg(tNodeInfo.ubCodecIdx))
@@ -12206,7 +12206,7 @@ uint8_t ubKNL_UpdateUvcImage(KNL_PROCESS tProc, KNL_NODE tCurNode)
 				ubResData[4] = tProc.ubSrcNum;
                 ubResData[5] = 0;
 				KNL_VdoResSetting((TWC_TAG)TWC_STA1, ubResData);
-				printd(DBG_InfoLvl, "\n   >-Img Res: [%dx%d]\n", uwKNL_ImgHSize, uwKNL_ImgVSize);
+				//printd(DBG_InfoLvl, "\n   >-Img Res: [%dx%d]\n", uwKNL_ImgHSize, uwKNL_ImgVSize);
 				ubKNL_UvcChgResFlag = FALSE;
 			}
 			return TRUE;
@@ -12228,7 +12228,7 @@ uint8_t ubKNL_UpdateUvcImage(KNL_PROCESS tProc, KNL_NODE tCurNode)
 				ubResData[4] = tProc.ubSrcNum;
                 ubResData[5] = 0; 
 				KNL_VdoResSetting((TWC_TAG)TWC_STA1, ubResData);
-				printd(DBG_InfoLvl, "\n   <-Img Res: [%dx%d]\n", ISP_WIDTH, ISP_HEIGHT);
+				//printd(DBG_InfoLvl, "\n   <-Img Res: [%dx%d]\n", ISP_WIDTH, ISP_HEIGHT);
 				ubKNL_UvcChgResFlag = TRUE;
 				goto UPD_UVC_END;
 			}
@@ -12645,9 +12645,9 @@ void KNL_ShowVdoPathNode(uint8_t ubSrcNum)
 	uint8_t i;
 	uint8_t ubCurNode;	
 	
-	printd(DBG_Debug3Lvl, "**********************************************************************\r\n");
-	printd(DBG_Debug3Lvl, "****************     Video Path Information(%d)     ******************\r\n",ubSrcNum);
-	printd(DBG_Debug3Lvl, "**********************************************************************\r\n");	
+	//printd(DBG_Debug3Lvl, "**********************************************************************\r\n");
+	//printd(DBG_Debug3Lvl, "****************     Video Path Information(%d)     ******************\r\n",ubSrcNum);
+	//printd(DBG_Debug3Lvl, "**********************************************************************\r\n");	
 	
 	for(i=0;i<KNL_MAX_NODE_NUM;i++)
 	{		
@@ -12656,76 +12656,76 @@ void KNL_ShowVdoPathNode(uint8_t ubSrcNum)
 		//Current
 		if(ubCurNode == KNL_NODE_SEN)
 		{
-			printd(DBG_Debug3Lvl, "{SEN}->");
+			//printd(DBG_Debug3Lvl, "{SEN}->");
 		}
 		else if(ubCurNode == KNL_NODE_SEN_YUV_BUF)
 		{
-			printd(DBG_Debug3Lvl, "{SEN_YUV_BUF}->");
+			//printd(DBG_Debug3Lvl, "{SEN_YUV_BUF}->");
 		}
 		else if(ubCurNode == KNL_NODE_H264_ENC)
 		{
-			printd(DBG_Debug3Lvl, "{H264_ENC}->");
+			//printd(DBG_Debug3Lvl, "{H264_ENC}->");
 		}
 		else if(ubCurNode == KNL_NODE_VDO_BS_BUF1)
 		{
-			printd(DBG_Debug3Lvl, "{VDO_BS_BUF1}->");
+			//printd(DBG_Debug3Lvl, "{VDO_BS_BUF1}->");
 		}
 		else if(ubCurNode == KNL_NODE_VDO_BS_BUF2)
 		{
-			printd(DBG_Debug3Lvl, "{VDO_BS_BUF2}->");
+			//printd(DBG_Debug3Lvl, "{VDO_BS_BUF2}->");
 		}		
 		else if(ubCurNode == KNL_NODE_COMM_TX_VDO)
 		{
-			printd(DBG_Debug3Lvl, "{COMM_TX_VDO}->");
+			//printd(DBG_Debug3Lvl, "{COMM_TX_VDO}->");
 		}
 		else if(ubCurNode == KNL_NODE_COMM_RX_VDO)
 		{
-			printd(DBG_Debug3Lvl, "{COMM_RX_VDO}->");
+			//printd(DBG_Debug3Lvl, "{COMM_RX_VDO}->");
 		}
 		else if(ubCurNode == KNL_NODE_H264_DEC)
 		{
-			printd(DBG_Debug3Lvl, "{H264_DEC}->");
+			//printd(DBG_Debug3Lvl, "{H264_DEC}->");
 		}
 		else if(ubCurNode == KNL_NODE_IMG_MERGE_BUF)
 		{
-			printd(DBG_Debug3Lvl, "{IMG_MERGE_BUF}->");
+			//printd(DBG_Debug3Lvl, "{IMG_MERGE_BUF}->");
 		}
 		else if(ubCurNode == KNL_NODE_IMG_MERGE_H)
 		{
-			printd(DBG_Debug3Lvl, "{IMG_MERGE_H}->");
+			//printd(DBG_Debug3Lvl, "{IMG_MERGE_H}->");
 		}		
 		else if(ubCurNode == KNL_NODE_LCD)
 		{
-			printd(DBG_Debug3Lvl, "{LCD}->");
+			//printd(DBG_Debug3Lvl, "{LCD}->");
 		}
 		else if(ubCurNode == KNL_NODE_VDO_REC)
 		{
-			printd(DBG_Debug3Lvl, "{VDO_REC}->");
+			//printd(DBG_Debug3Lvl, "{VDO_REC}->");
 		}
 		else if(ubCurNode == KNL_NODE_JPG_ENC)
 		{
-			printd(DBG_Debug3Lvl, "{JPG_ENC}->");
+			//printd(DBG_Debug3Lvl, "{JPG_ENC}->");
 		}				
 		else if(ubCurNode == KNL_NODE_JPG_DEC1)
 		{
-			printd(DBG_Debug3Lvl, "{JPG_DEC1}->");
+			//printd(DBG_Debug3Lvl, "{JPG_DEC1}->");
 		}
 		else if(ubCurNode == KNL_NODE_JPG_DEC2)
 		{
-			printd(DBG_Debug3Lvl, "{JPG_DEC2}->");
+			//printd(DBG_Debug3Lvl, "{JPG_DEC2}->");
 		}
 		else if(ubCurNode == KNL_NODE_UVC_MAIN)
 		{
-			printd(DBG_Debug3Lvl, "{UVC_MAIN}->");
+			//printd(DBG_Debug3Lvl, "{UVC_MAIN}->");
 		}
 		else if(ubCurNode == KNL_NODE_UVC_SUB)
 		{
-			printd(DBG_Debug3Lvl, "{UVC_SUB}->");
+			//printd(DBG_Debug3Lvl, "{UVC_SUB}->");
 		}
 		else if(ubCurNode == KNL_NODE_END)
 		{
-			printd(DBG_Debug3Lvl, "{END}\r\n");
-			printd(DBG_Debug3Lvl, "\r\n");
+			//printd(DBG_Debug3Lvl, "{END}\r\n");
+			//printd(DBG_Debug3Lvl, "\r\n");
 		}		
 	}	
 }
@@ -12735,9 +12735,9 @@ void KNL_ShowAdoPathNode(uint8_t ubSrcNum)
 	uint8_t i;	
 	uint8_t ubCurNode;	
 	
-	printd(DBG_Debug3Lvl, "r\n");
-	printd(DBG_Debug3Lvl, "****     Audio Path Information(%d)    ******\r\n",ubSrcNum);
-	printd(DBG_Debug3Lvl, "******************************************\r\n");	
+	//printd(DBG_Debug3Lvl, "r\n");
+	//printd(DBG_Debug3Lvl, "****     Audio Path Information(%d)    ******\r\n",ubSrcNum);
+	//printd(DBG_Debug3Lvl, "******************************************\r\n");	
 	
 	for(i=0;i<KNL_MAX_NODE_NUM;i++)
 	{	
@@ -12746,32 +12746,32 @@ void KNL_ShowAdoPathNode(uint8_t ubSrcNum)
 		//Current
 		if(ubCurNode == KNL_NODE_ADC)
 		{
-			printd(DBG_Debug3Lvl, "{ADC}->");
+			//printd(DBG_Debug3Lvl, "{ADC}->");
 		}		
 		else if(ubCurNode == KNL_NODE_ADC_BUF)
 		{
-			printd(DBG_Debug3Lvl, "{ADC_BUF}->");
+			//printd(DBG_Debug3Lvl, "{ADC_BUF}->");
 		}
 		else if(ubCurNode == KNL_NODE_DAC_BUF)
 		{
-			printd(DBG_Debug3Lvl, "{DAC_BUF}->");
+			//printd(DBG_Debug3Lvl, "{DAC_BUF}->");
 		}
 		else if(ubCurNode == KNL_NODE_DAC)
 		{
-			printd(DBG_Debug3Lvl, "{DAC}->");
+			//printd(DBG_Debug3Lvl, "{DAC}->");
 		}
 		else if(ubCurNode == KNL_NODE_COMM_TX_ADO)
 		{
-			printd(DBG_Debug3Lvl, "{COMM_TX_ADO}->");
+			//printd(DBG_Debug3Lvl, "{COMM_TX_ADO}->");
 		}
 		else if(ubCurNode == KNL_NODE_COMM_RX_ADO)
 		{
-			printd(DBG_Debug3Lvl, "{COMM_RX_ADO}->");			
+			//printd(DBG_Debug3Lvl, "{COMM_RX_ADO}->");			
 		}
 		else if(ubCurNode == KNL_NODE_END)
 		{
-			printd(DBG_Debug3Lvl, "{END}\r\n");
-			printd(DBG_Debug3Lvl, "\r\n");
+			//printd(DBG_Debug3Lvl, "{END}\r\n");
+			//printd(DBG_Debug3Lvl, "\r\n");
 		}		
 	}	
 }
@@ -14001,7 +14001,7 @@ void KNL_EnHighQualityImageEnc(uint8_t ubEn, uint8_t ubSrcNum)
 	RC_EnHighQualityPresetMode(ubEn, (H264_ENCODE_INDEX)tNodeInfo.ubCodecIdx);
 	H264_ResetIPCnt((H264_ENCODE_INDEX)tNodeInfo.ubCodecIdx);
 	ulKNL_CurFrmIdx[(H264_ENCODE_INDEX)tNodeInfo.ubCodecIdx] = 0;
-	printd(DBG_Debug1Lvl, "[%d]HQ Cap mode: %d\n", ubSrcNumMap, ubEn);
+	//printd(DBG_Debug1Lvl, "[%d]HQ Cap mode: %d\n", ubSrcNumMap, ubEn);
 }
 #endif
 
@@ -14342,7 +14342,7 @@ void KNL_H264DecProcess(KNL_PROCESS tProc)
 			if((KNL_PHOTO_PLAY == tKNL_GetRecordFunc()) || (JPG_LCDCH_ENABLE == tKNL_GetJpegLcdChCtrl()))
 			{
 				ulAddr = ulKNL_GetResvDecAddr();
-				printd(DBG_InfoLvl, "		->[%d]Resv DEC: 0x%X\n", tProc.ubSrcNum, ulAddr);
+				//printd(DBG_InfoLvl, "		->[%d]Resv DEC: 0x%X\n", tProc.ubSrcNum, ulAddr);
 			}
 			#if (defined(BUC_CU) && (DISPLAY_MODE != DISPLAY_1T1R))
 			else if((TRUE == ubKNL_BbPathAct) && (TRUE == KNL_SwDispInfo.ubSetupFlag))
@@ -14884,7 +14884,7 @@ void KNL_JpegDec1Process(KNL_PROCESS tProc)
 		}
 		else
 		{
-			printd(DBG_Debug3Lvl, "J->DQ1\r\n");
+			//printd(DBG_Debug3Lvl, "J->DQ1\r\n");
 		#if FPGA
 			osDelay(50);
 		#endif
@@ -14935,7 +14935,7 @@ void KNL_JpegDec2Process(KNL_PROCESS tProc)
 		}
 		else
 		{
-			printd(DBG_Debug3Lvl, "J->DQ2\r\n");
+			//printd(DBG_Debug3Lvl, "J->DQ2\r\n");
 		#if FPGA
 			osDelay(50);
 		#endif
@@ -15004,7 +15004,7 @@ void KNL_JpegEncProcess(KNL_PROCESS tProc)
 		}
 		else
 		{
-			printd(DBG_Debug3Lvl, "J->EQ1\r\n");
+			//printd(DBG_Debug3Lvl, "J->EQ1\r\n");
 		#if FPGA
 			osDelay(50);
 		#endif
@@ -15312,7 +15312,7 @@ void KNL_ImgMergeHProcess(KNL_PROCESS tProc)
 		}
 		else
 		{
-			printd(DBG_Debug3Lvl, "IMH1-Q\r\n");
+			//printd(DBG_Debug3Lvl, "IMH1-Q\r\n");
 			tMergeProc.ulDramAddr1	= tProc.ulDramAddr1;
 			tMergeProc.ulDramAddr2	= tProc.ulDramAddr2;	
 			tMergeProc.ubSrcNum		= tProc.ubSrcNum;			
@@ -15628,7 +15628,7 @@ void KNL_BbTxVdoProcess2(KNL_PROCESS tProc)
 			ubTemp = ubKNL_ReleaseBsBufAddr(KNL_NODE_COMM_TX_VDO,tProc.ubSrcNum,ulOriAddr);
 			if(ubTemp == BUF_OK)
 			{
-				printd(DBG_Debug3Lvl, "Release BUF_VDO_BS Ok\r\n");
+				//printd(DBG_Debug3Lvl, "Release BUF_VDO_BS Ok\r\n");
 			}
 			else
 			{
@@ -15643,7 +15643,7 @@ void KNL_BbTxVdoProcess2(KNL_PROCESS tProc)
 			ubTemp = ubKNL_ReleaseBsBufAddr(KNL_NODE_COMM_TX_VDO,tProc.ubSrcNum,ulOriAddr);
 			if(ubTemp == BUF_OK)
 			{
-				printd(DBG_Debug3Lvl, "Release BUF_VDO_BS Ok\r\n");
+				//printd(DBG_Debug3Lvl, "Release BUF_VDO_BS Ok\r\n");
 			}
 			else
 			{
@@ -15656,7 +15656,7 @@ void KNL_BbTxVdoProcess2(KNL_PROCESS tProc)
 		ubTemp = ubKNL_ReleaseBsBufAddr(KNL_NODE_COMM_TX_VDO,tProc.ubSrcNum,ulOriAddr);
 		if(ubTemp == BUF_OK)
 		{
-			printd(DBG_Debug3Lvl, "Release BUF_VDO_BS Ok\r\n");
+			//printd(DBG_Debug3Lvl, "Release BUF_VDO_BS Ok\r\n");
 		}
 		else
 		{
@@ -15732,7 +15732,7 @@ RTYSEND_VDO:
 			ubBbBufFlg = 0;
 		}
 
-		printd(DBG_Debug2Lvl, "BB[%d]: %d_%d_%d(%d)\r\n", tProc.ubSrcNum, ubBbStartFlg, ubBbLinkFlg, ubBbBufFlg, ubKNL_BbRtyFlg);
+		//printd(DBG_Debug2Lvl, "BB[%d]: %d_%d_%d(%d)\r\n", tProc.ubSrcNum, ubBbStartFlg, ubBbLinkFlg, ubBbBufFlg, ubKNL_BbRtyFlg);
 
 		//Case 1
 		if(ubBbStartFlg && ubBbLinkFlg && ubBbBufFlg)
@@ -15758,7 +15758,7 @@ RTYSEND_VDO:
 			ubTemp = ubKNL_ReleaseBsBufAddr(KNL_NODE_COMM_TX_VDO,tProc.ubSrcNum,tProc.ulDramAddr2);
 			if(ubTemp == BUF_OK)
 			{
-				printd(DBG_Debug3Lvl, "Release BUF_VDO_BS Ok\r\n");
+				//printd(DBG_Debug3Lvl, "Release BUF_VDO_BS Ok\r\n");
 			}
 			else
 			{
@@ -15778,7 +15778,7 @@ RTYSEND_VDO:
 			ubTemp = ubKNL_ReleaseBsBufAddr(KNL_NODE_COMM_TX_VDO,tProc.ubSrcNum,tProc.ulDramAddr2);
 			if(ubTemp == BUF_OK)
 			{
-				printd(DBG_Debug3Lvl, "Release BUF_VDO_BS Ok\r\n");
+				//printd(DBG_Debug3Lvl, "Release BUF_VDO_BS Ok\r\n");
 			}
 			else
 			{
@@ -15796,20 +15796,20 @@ RTYSEND_VDO:
 		else if(ubBbStartFlg && ubBbLinkFlg && (!ubBbBufFlg) && (!ubKNL_BbRtyFlg))
 		{
 			ubKNL_BbRtyFlg = 1;
-			printd(DBG_Debug3Lvl, "V->RTY:0x%x\r\n",tProc.ulSize);
+			//printd(DBG_Debug3Lvl, "V->RTY:0x%x\r\n",tProc.ulSize);
 			osDelay(30);
 			goto RTYSEND_VDO;
 		}
 		else
 		{
 			ubKNL_BbRtyFlg = 0;
-			printd(DBG_Debug3Lvl, "V->RTY:0x%x->Clr\r\n",tProc.ulSize);
+			//printd(DBG_Debug3Lvl, "V->RTY:0x%x->Clr\r\n",tProc.ulSize);
 			BB_ClearTxBuf(BB_TX_MASTER,BB_DATA_VIDEO);
 			//Relase BS Buffer
 			ubTemp = ubKNL_ReleaseBsBufAddr(KNL_NODE_COMM_TX_VDO,tProc.ubSrcNum,tProc.ulDramAddr2);
 			if(ubTemp == BUF_OK)
 			{
-				printd(DBG_Debug3Lvl, "Release BUF_VDO_BS Ok\r\n");
+				//printd(DBG_Debug3Lvl, "Release BUF_VDO_BS Ok\r\n");
 			}
 			else
 			{
@@ -15831,7 +15831,7 @@ RTYSEND_VDO:
 		ubTemp = ubKNL_ReleaseBsBufAddr(KNL_NODE_COMM_TX_VDO,tProc.ubSrcNum,tProc.ulDramAddr2);
 		if(ubTemp == BUF_OK)
 		{
-			printd(DBG_Debug3Lvl, "Release BUF_VDO_BS Ok\r\n");
+			//printd(DBG_Debug3Lvl, "Release BUF_VDO_BS Ok\r\n");
 		}
 		else
 		{
@@ -15980,7 +15980,7 @@ static void KNL_CalcLatencyThread(void const *argument)
 			tKNL_VdoLatency.tLatency[tKNL_LatyData.ubStaNum].fMinLtcy = tKNL_VdoLatency.tLatency[tKNL_LatyData.ubStaNum].fFrmLtcy;
 			ubKNL_LatyDispFlag |= 2;
 		}
-		printd(DBG_InfoLvl, "\r\n [%d]L: %.3lf ms\r\n", tKNL_LatyData.ubStaNum, tKNL_VdoLatency.tLatency[tKNL_LatyData.ubStaNum].fFrmLtcy);
+		//printd(DBG_InfoLvl, "\r\n [%d]L: %.3lf ms\r\n", tKNL_LatyData.ubStaNum, tKNL_VdoLatency.tLatency[tKNL_LatyData.ubStaNum].fFrmLtcy);
 		if((pKNL_PerDbgFunc[1]) && (ubKNL_LatyDispFlag & 0x1))
 			pKNL_PerDbgFunc[1](PER_SPRFAVGL_RPT, tKNL_LatyData.ubStaNum, tKNL_VdoLatency.tLatency[tKNL_LatyData.ubStaNum].fAvgLtcy);			
 		if((pKNL_PerDbgFunc[1]) && (ubKNL_LatyDispFlag & 0x2))
@@ -16121,10 +16121,10 @@ uint32_t ulKNL_H264EncReport(uint8_t ubSrcNum, uint32_t ulEncBs, uint32_t ulFrmI
 		tKNL_H264EncInfo[tNodeInfo.ubCodecIdx].ulBps += (ulEncBs * 8);
 		fCurBs = (float)ulEncBs/1024;
 		ubQp   = ubKNL_GetQp(tNodeInfo.ubCodecIdx);
-		printd(DBG_InfoLvl, "  %02d:[%fKB, QP:%02d]\n", tKNL_H264EncInfo[tNodeInfo.ubCodecIdx].ubFrames, fCurBs, ubQp);
+		//printd(DBG_InfoLvl, "  %02d:[%fKB, QP:%02d]\n", tKNL_H264EncInfo[tNodeInfo.ubCodecIdx].ubFrames, fCurBs, ubQp);
 		if(!tKNL_H264EncInfo[tNodeInfo.ubCodecIdx].ubFrames)
 		{
-			printd(DBG_InfoLvl, " Bps:%fKB\n", (float)tKNL_H264EncInfo[tNodeInfo.ubCodecIdx].ulBps/8192);
+			//printd(DBG_InfoLvl, " Bps:%fKB\n", (float)tKNL_H264EncInfo[tNodeInfo.ubCodecIdx].ulBps/8192);
 			tKNL_H264EncInfo[tNodeInfo.ubCodecIdx].ulBps = 0;
 		}
 	}
@@ -16982,10 +16982,10 @@ RTYSEND_ADO:
 			switch(tKNL_BbStatus)
 			{
 				case BB_SET_BUF_SUCCESS:
-					printd(DBG_Debug3Lvl, "A:0x%x\r\n",ulExtSz);
+					//printd(DBG_Debug3Lvl, "A:0x%x\r\n",ulExtSz);
 					break;
 				case BB_SET_BUF_BUSY:
-					printd(DBG_Debug3Lvl, "A->RTY:0x%x\r\n",ulExtSz);
+					//printd(DBG_Debug3Lvl, "A->RTY:0x%x\r\n",ulExtSz);
 					if(++ubAdoRtyCnt < 25)
 					{
 						osDelay(20);
@@ -16998,7 +16998,7 @@ RTYSEND_ADO:
 			ubTemp = ubBUF_ReleaseAdcBuf(ulAdcAddr);
 			if(ubTemp == BUF_OK)
 			{
-				printd(DBG_Debug3Lvl, "Release BUF_ADC Ok\r\n");
+				//printd(DBG_Debug3Lvl, "Release BUF_ADC Ok\r\n");
 			}
 			else
 			{
@@ -17187,7 +17187,7 @@ void KNL_AdcBufProcess2(KNL_PROCESS tProc)
 			ubTemp = ubBUF_ReleaseAdcBuf(ulAdcAddr);
 			if(ubTemp == BUF_OK)
 			{
-				printd(DBG_Debug3Lvl, "Release BUF_ADC Ok\r\n");
+				//printd(DBG_Debug3Lvl, "Release BUF_ADC Ok\r\n");
 			}
 			else
 			{
@@ -17246,13 +17246,13 @@ void KNL_RetryAdcBufProcess(KNL_PROCESS tProc)
 		tKNL_BbStatus = tBB_SendData(NULL,BB_DATA_AUDIO,(uint8_t *)tProc.ulDramAddr2,tProc.ulSize,(SET_TX_PATH)NULL,0);
 		if(BB_SET_BUF_SUCCESS == tKNL_BbStatus)	
 		{
-			printd(DBG_Debug3Lvl, "RA:0x%x\r\n",tProc.ulSize);
+			//printd(DBG_Debug3Lvl, "RA:0x%x\r\n",tProc.ulSize);
 			//Relase BS Buffer
 			//-------------------------------------------------------------
 			ubTemp = ubBUF_ReleaseAdcBuf(tProc.ulDramAddr2);
 			if(ubTemp == BUF_OK)
 			{
-				printd(DBG_Debug3Lvl, "Release BUF_ADO Ok\r\n");
+				//printd(DBG_Debug3Lvl, "Release BUF_ADO Ok\r\n");
 			}
 			else
 			{
@@ -17261,7 +17261,7 @@ void KNL_RetryAdcBufProcess(KNL_PROCESS tProc)
 		}
 		else if(BB_SET_BUF_BUSY == tKNL_BbStatus)	
 		{
-			printd(DBG_Debug3Lvl, "RAQ:0x%x\r\n",tProc.ulSize);
+			//printd(DBG_Debug3Lvl, "RAQ:0x%x\r\n",tProc.ulSize);
 			osDelay(30);
 			//Retry Method
 			tKNLInfo.ubSrcNum    = tProc.ubSrcNum;
@@ -17279,12 +17279,12 @@ void KNL_RetryAdcBufProcess(KNL_PROCESS tProc)
 	}
 	else
 	{
-		printd(DBG_Debug3Lvl, "BU(A)\r\n");
+		//printd(DBG_Debug3Lvl, "BU(A)\r\n");
 		//Relase BS Buffer
 		ubTemp = ubBUF_ReleaseAdcBuf(tKNLInfo.ulDramAddr2);
 		if(ubTemp == BUF_OK)
 		{
-			printd(DBG_Debug3Lvl, "Release BUF_ADC Ok\r\n");
+			//printd(DBG_Debug3Lvl, "Release BUF_ADC Ok\r\n");
 		}
 		else
 		{
@@ -17464,21 +17464,21 @@ void KNL_GetTxFSInfo(uint32_t ulAddr,uint32_t ulSize)
         ubPaddingSize = *((uint8_t *)(ulAddr+ulSize-KNL_INFO_FS_PAD));
         if(ubInfoType == 0 && pKNL_TXFldInfo != NULL)
         {
-            printd(DBG_InfoLvl,"GetTxFoldInfo = %d %d %x\n",ubInfoType,ubPaddingSize,ulInfoSize);
+            //printd(DBG_InfoLvl,"GetTxFoldInfo = %d %d %x\n",ubInfoType,ubPaddingSize,ulInfoSize);
             KNL_TXFldInfoSz = (ulInfoSize-ubPaddingSize);
             memcpy((uint8_t*)pKNL_TXFldInfo,(uint8_t*)(ulAddr+ulFrameSize),(ulInfoSize-ubPaddingSize));
             ptKNL_TxFsCbFunc(0);
         }
         else if(ubInfoType == 1 && pKNL_TXFilInfo != NULL)
         {
-            printd(DBG_InfoLvl,"GetTxFileInfo = %d %d %x\n",ubInfoType,ubPaddingSize,ulInfoSize);
+            //printd(DBG_InfoLvl,"GetTxFileInfo = %d %d %x\n",ubInfoType,ubPaddingSize,ulInfoSize);
             KNL_TXFileInfoSz = (ulInfoSize-ubPaddingSize);
             memcpy((uint8_t*)pKNL_TXFilInfo,(uint8_t*)(ulAddr+ulFrameSize),(ulInfoSize-ubPaddingSize));
             ptKNL_TxFsCbFunc(1);
         }
         else if(ubInfoType == 2 )
         {
-            printd(DBG_InfoLvl,"GetTxHidenInfo = %d %d %x\n",ubInfoType,ubPaddingSize,ulInfoSize);
+            //printd(DBG_InfoLvl,"GetTxHidenInfo = %d %d %x\n",ubInfoType,ubPaddingSize,ulInfoSize);
             memcpy((uint8_t*)&tKNL_TXFSHiddenInfo,(uint8_t*)(ulAddr+ulFrameSize),(ulInfoSize-ubPaddingSize));
             ptKNL_TxFsCbFunc(2);
         }
@@ -17857,7 +17857,7 @@ static void KNL_AvgPlyThread(void const *argument)
 		else
 		{			
 			ulQNum = osMessages(KNL_AvgPlyQ[ubSrcNum].Id);
-			printd(DBG_Debug3Lvl, "AQ[%d]:%d\r\n",ubSrcNum,ulQNum);			
+			//printd(DBG_Debug3Lvl, "AQ[%d]:%d\r\n",ubSrcNum,ulQNum);			
 			
 			if(ulQNum < (ubKNL_GetStartPlyNum()-1))
 			{				
@@ -17876,7 +17876,7 @@ static void KNL_AvgPlyThread(void const *argument)
 			if(osMessages(KNL_AvgPlyQ[ubSrcNum].Id))
 			{
 				osMessageGet(KNL_AvgPlyQ[ubSrcNum].Id, &tProc, osWaitForever);
-				printd(DBG_Debug3Lvl, "AvgPlyQue->%d\r\n",tProc.ulIdx);			
+				//printd(DBG_Debug3Lvl, "AvgPlyQue->%d\r\n",tProc.ulIdx);			
 				
 				if(osMessagePutToFront(KNL_VdoCodecProcQueue, &tProc, 0) == osErrorResource)
 				{		
@@ -23021,14 +23021,14 @@ static void KNL_CommLinkUpdateThread(void const *argument)
 							}
 							if((ubKNL_ChkVdoFlowAct(ubSrcNumMap1)||ubKNL_ChkVdoFlowAct(ubSrcNumMap2)||ubKNL_ChkVdoFlowAct(ubSrcNumMap3)))
 							{
-								printd(DBG_Debug3Lvl, "Rst AvgPly[%d]\r\n",k);
+								//printd(DBG_Debug3Lvl, "Rst AvgPly[%d]\r\n",k);
 								ubKNL_AvgPlyStartFlg[k] = 0;
 								while(1)
 								{
 									if(osMessages(KNL_AvgPlyQ[k].Id))
 									{
 										osMessageGet(KNL_AvgPlyQ[k].Id, &tProc, 0);
-										printd(DBG_Debug3Lvl, "SrcNum:%d _ BS_Adr:0x%x\r\n",tProc.ubSrcNum, tProc.ulDramAddr2);
+										//printd(DBG_Debug3Lvl, "SrcNum:%d _ BS_Adr:0x%x\r\n",tProc.ubSrcNum, tProc.ulDramAddr2);
 										ubKNL_ReleaseBsBufAddr(KNL_NODE_H264_DEC,tProc.ubSrcNum,tProc.ulDramAddr2);
 									}
 									else
@@ -23187,7 +23187,7 @@ KNL_UsbdUvcRet_t tKNL_UpdateMjUvcImage(uint32_t ulYuvAddr, uint8_t ubSrcNum)
 	{
 		ulJpgSize = ulJPEG_Get_BS_Size();
 		JPEG_Codec_Disable();
-		printd(DBG_InfoLvl, "  JPG Bs Size: 0x%X[%d]\r\n", ulJpgSize, ubCodecRetryNum);
+		//printd(DBG_InfoLvl, "  JPG Bs Size: 0x%X[%d]\r\n", ulJpgSize, ubCodecRetryNum);
 		if((ulJpgSize + KNL_JPG_HEADER_SIZE) > (ulFiFoSize - KNL_MJ_BUF_ALIGN_1K - KNL_JPG_HEADER_SIZE))
 			printd(DBG_ErrorLvl, "JPG Bs size overflow\n");
 		tUpdUvcRet = (FALSE == uvc_update_image((uint32_t *)ulJpgAddr, (ulJpgSize + KNL_JPG_HEADER_SIZE)))?KNL_UVCO_FAIL:KNL_UVCO_OK;
@@ -23434,8 +23434,8 @@ KNL_SRC tKNL_RxVdoInProcess(uint8_t ubSta, uint32_t ulVdoAddr, uint32_t ulVdoSiz
 		}
 		ubKNL_VdoResChgTwcFlg[ubSrcNumMap] = FALSE;
 		tKNL_RecvFrmType = tKNL_GetFrameType(ulVdoAddr);
-		printd(DBG_InfoLvl, "[%d]:H[%d]xV[%d]\r\n",ubSrcNum, uwKNL_PktHSize, uwKNL_PktVSize);
-		printd(DBG_Debug2Lvl, "V[%d]:0x%x_M:%d_I:%d_G:%d_VG:%d_T:%d\r\n",ubSrcNum,ulVdoAddr,ubOpMode,ulCurFrmIdx[ubSrcNum],ulGop,ubVdoGop,ulTime);
+		//printd(DBG_InfoLvl, "[%d]:H[%d]xV[%d]\r\n",ubSrcNum, uwKNL_PktHSize, uwKNL_PktVSize);
+		//printd(DBG_Debug2Lvl, "V[%d]:0x%x_M:%d_I:%d_G:%d_VG:%d_T:%d\r\n",ubSrcNum,ulVdoAddr,ubOpMode,ulCurFrmIdx[ubSrcNum],ulGop,ubVdoGop,ulTime);
 		
 		//printf("F[%d]\r\n",ulCurFrmIdx[ubSrcNum]);
 
@@ -23844,8 +23844,8 @@ RX_VDOINFO_ERR:
 		
 		ubKNL_VdoResChgTwcFlg[ubSrcNumMap] = FALSE;
 		tKNL_RecvFrmType = tKNL_GetFrameType(ulVdoAddr);
-		printd(DBG_InfoLvl, "[%d]:H[%d]xV[%d]\r\n",ubSrcNum, uwKNL_PktHSize, uwKNL_PktVSize);
-		printd(DBG_Debug2Lvl, "V[%d]:0x%x_M:%d_I:%d_G:%d_VG:%d_T:%d\r\n",ubSrcNum,ulVdoAddr,ubOpMode,ulCurFrmIdx[ubSrcNum],ulGop,ubVdoGop,ulTime);
+		//printd(DBG_InfoLvl, "[%d]:H[%d]xV[%d]\r\n",ubSrcNum, uwKNL_PktHSize, uwKNL_PktVSize);
+		//printd(DBG_Debug2Lvl, "V[%d]:0x%x_M:%d_I:%d_G:%d_VG:%d_T:%d\r\n",ubSrcNum,ulVdoAddr,ubOpMode,ulCurFrmIdx[ubSrcNum],ulGop,ubVdoGop,ulTime);
 		
 		if(ubKNL_ChkVdoFlowAct(ubSrcNum) && (ubKNL_RcvFirstIFrame[ubSrcNum] == 0))
 		{
@@ -24233,7 +24233,7 @@ void KNL_UpdateUsbdAdoData(uint32_t ulAdoPcmAddr, uint32_t ulAdoPcmSize, ADO_SAM
 	//! USBD Send
 	if(FALSE == uvc_update_image((uint32_t *)ulUsbdAdoAddr, (ulAdoPcmSize + ulUvcAuxSize)))
 		KNL_ReleaseUsbdBuf(ulUsbdAdoAddr);
-	printd(DBG_InfoLvl, "  {%d}\n", *((uint8_t *)(ulUsbdAdoAddr + UVC_OFS_CH_INFO)));
+	//printd(DBG_InfoLvl, "  {%d}\n", *((uint8_t *)(ulUsbdAdoAddr + UVC_OFS_CH_INFO)));
 }
 //------------------------------------------------------------------------------
 uint32_t ulKNL_SetUsbdAdoPktInfo(uint32_t ulAdoAddr, uint32_t ulAdoSize)
@@ -24527,7 +24527,7 @@ static void KNL_CommAdoRxMonitThread(void const *argument)
             {
 			#ifdef S2019A
 				ulRealSz = ulKNL_GetAdoPktSZ(Don.ulAddr, Don.ulSize);
-				printd(DBG_Debug3Lvl, "Real-Sz:0x%x\r\n", ulRealSz);
+				//printd(DBG_Debug3Lvl, "Real-Sz:0x%x\r\n", ulRealSz);
 				tKNLInfo.ubSrcNum    = ubSrcNum;
 				tKNLInfo.ulDramAddr2 = Don.ulAddr;
 				tKNLInfo.ulSize		 = Don.ulSize;
@@ -24590,7 +24590,7 @@ static void KNL_CommAdoRxMonitThread(void const *argument)
 					{
 						//(4-1)Check Real-Size Information
 						ulRealSz = ulKNL_GetAdoPktSZ(ulTemp, Don.ulSize);
-						printd(DBG_Debug3Lvl, "Real-Sz:0x%x\r\n", ulRealSz);
+						//printd(DBG_Debug3Lvl, "Real-Sz:0x%x\r\n", ulRealSz);
 
 						//(5)Send Queue to Next Node
 						tKNLInfo.ubSrcNum    = ubSrcNum;
@@ -24856,17 +24856,17 @@ static void KNL_JpegMonitThread(void const *argument)
 		if((ubInfo_Action == 1) && (ubInfo_PreNode == KNL_NODE_JPG_DEC1))
 		{
 			KNL_SetNodeState(ubInfo_PreSrc,KNL_NODE_JPG_DEC1,KNL_NODE_STOP);			
-			printd(DBG_Debug3Lvl, "J->D1[%d]:0x%x_0x%x_0x%x\r\n",ubInfo_PreSrc,ulInfo_YuvAddr,ulInfo_BsAddr,ulInfo_Size);
+			//printd(DBG_Debug3Lvl, "J->D1[%d]:0x%x_0x%x_0x%x\r\n",ubInfo_PreSrc,ulInfo_YuvAddr,ulInfo_BsAddr,ulInfo_Size);
 		}
 		else if((ubInfo_Action == 1) && (ubInfo_PreNode == KNL_NODE_JPG_DEC2))
 		{
 			KNL_SetNodeState(ubInfo_PreSrc,KNL_NODE_JPG_DEC2,KNL_NODE_STOP);
-			printd(DBG_Debug3Lvl, "J->D2[%d]:0x%x_0x%x_0x%x\r\n",ubInfo_PreSrc,ulInfo_YuvAddr,ulInfo_BsAddr,ulInfo_Size);
+			//printd(DBG_Debug3Lvl, "J->D2[%d]:0x%x_0x%x_0x%x\r\n",ubInfo_PreSrc,ulInfo_YuvAddr,ulInfo_BsAddr,ulInfo_Size);
 		}
 		else if((ubInfo_Action == 0) && (ubInfo_PreNode == KNL_NODE_JPG_ENC))
 		{
 			KNL_SetNodeState(ubInfo_PreSrc,KNL_NODE_JPG_ENC,KNL_NODE_STOP);
-			printd(DBG_Debug3Lvl, "J->E[%d]:0x%x_0x%x_0x%x\r\n",ubInfo_PreSrc,ulInfo_YuvAddr,ulInfo_BsAddr,ulInfo_Size);
+			//printd(DBG_Debug3Lvl, "J->E[%d]:0x%x_0x%x_0x%x\r\n",ubInfo_PreSrc,ulInfo_YuvAddr,ulInfo_BsAddr,ulInfo_Size);
 		}
 
 		//(3)Release BS Buffer
@@ -25647,7 +25647,7 @@ void KNL_ImgMonitorFunc(struct IMG_RESULT ReceiveResult)
 		osSemaphoreRelease(tKNL_ImgSem);
 		ubKNL_ImgRdy = 1;	//Codec Ready
 		osSemaphoreRelease(osKNL_H264CdcWaitSem);
-		printd(DBG_Debug3Lvl, "H->EOK\r\n");
+		//printd(DBG_Debug3Lvl, "H->EOK\r\n");
 	}
 	//Decode Process
 	//========================================================================
@@ -25861,7 +25861,7 @@ RELEASE_IMGDEC_SRC:
 				osSemaphoreRelease(tKNL_ImgSem);
 				ubKNL_ImgRdy = 1;	//Codec Ready
 				osSemaphoreRelease(osKNL_H264CdcWaitSem);
-				printd(DBG_Debug1Lvl, "IMG->MOK\r\n");
+				//printd(DBG_Debug1Lvl, "IMG->MOK\r\n");
 
 				//(2)To Next Node
 				if(ubTrigType == KNL_IMG_MERGE_H)
@@ -26011,7 +26011,7 @@ static void KNL_ImgMonitThread(void const *argument)
 				{
 					ulRtDr = ulRtDr + ulSubDr[i];
 				}
-				printd(DBG_Debug2Lvl, "== RtDr:%d KB ==\r\n",ulRtDr/8192);
+				//printd(DBG_Debug2Lvl, "== RtDr:%d KB ==\r\n",ulRtDr/8192);
 				ulKNL_VdoOutAccCnt[ubIdxMap] = ulKNL_VdoOutAccCntTemp[ubIdxMap];
 				ulKNL_VdoOutAccCntTemp[ubIdxMap] = 0;
 			}
@@ -26156,7 +26156,7 @@ static void KNL_ImgMonitThread(void const *argument)
 			//(4)Release IMG/H264
 			osSemaphoreRelease(tKNL_ImgSem);
             ubKNL_ImgRdy = 1;	//Codec Ready
-			printd(DBG_Debug3Lvl, "H->EOK\r\n");
+			//printd(DBG_Debug3Lvl, "H->EOK\r\n");
         }
         //Decode Process
         //========================================================================
@@ -26225,7 +26225,7 @@ static void KNL_ImgMonitThread(void const *argument)
             //(1)Release IMG/H264
 			osSemaphoreRelease(tKNL_ImgSem);
             ubKNL_ImgRdy = 1;	//Codec Ready
-			printd(DBG_Debug1Lvl, "IMG->MOK\r\n");
+			//printd(DBG_Debug1Lvl, "IMG->MOK\r\n");
                 
             //(2)To Next Node
             if(ubTrigType == KNL_IMG_MERGE_H)
@@ -27120,7 +27120,7 @@ void KNL_SetTrxBwRpt(KNL_ROLE tRole, uint32_t ulBw)
 	osMutexWait(osKNL_TrxBwMutex, osWaitForever);
 	ulKNL_TrxBwRpt[tRole] = ulBw;
 	osMutexRelease(osKNL_TrxBwMutex);
-	printd(DBG_InfoLvl, "   [%d]TX BW: %d\n", tRole, ulKNL_TrxBwRpt[tRole]);
+	//printd(DBG_InfoLvl, "   [%d]TX BW: %d\n", tRole, ulKNL_TrxBwRpt[tRole]);
 }
 //------------------------------------------------------------------------------
 uint32_t ulKNL_GetTrxBwRpt(KNL_ROLE tRole)
@@ -27186,7 +27186,7 @@ void KNL_BatteryInfoRptFunc(TWC_TAG GetSta, uint8_t *pData)
 void KNL_SetTargetFps(uint8_t ubFps)
 {
 	ubKNL_TargetFps = ubFps;
-	printd(DBG_Debug3Lvl, "Target FPS: %d\n", ubKNL_TargetFps);
+	//printd(DBG_Debug3Lvl, "Target FPS: %d\n", ubKNL_TargetFps);
 }
 //------------------------------------------------------------------------------
 void KNL_EnableWORFunc(void)
@@ -27513,7 +27513,7 @@ KNL_Status_t tKNL_WriteCaptureFile(uint8_t ubSrcNum, uint32_t ulCapSize)
 #endif
 	memcpy(tKNL_FsProc.FileName.chExt, "JPG", 3);
 	tKNL_FsProc.uwGroupIdx = tKNL_RecordAct.uwRecordGroupIdx;
-    printd(DBG_InfoLvl, "	Photo[%d][Sz:%d][Gp:%d]:[%s].JPG\n", ubSrcNum, ulCapSize ,tKNL_FsProc.uwGroupIdx, tKNL_FsProc.FileName.chName);
+    //printd(DBG_InfoLvl, "	Photo[%d][Sz:%d][Gp:%d]:[%s].JPG\n", ubSrcNum, ulCapSize ,tKNL_FsProc.uwGroupIdx, tKNL_FsProc.FileName.chName);
 	tKNL_FsProc.FileAttr = FILE_ATTR_READ_ONLY;
 	if(tKNL_FsMediaInfo.MediaType[tKNL_FsMediaInfo.MediaSel]==FS_MEDIA_TYPE_SD)
 	{

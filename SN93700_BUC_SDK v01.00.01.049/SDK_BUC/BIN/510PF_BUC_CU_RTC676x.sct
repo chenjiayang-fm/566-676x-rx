@@ -25,7 +25,8 @@
 #define SCT_CACHE_HEAP_ALIGN	(0x00000008)
 
 ;------------------------------------------------------------------------------
-LR_IROM1 SCT_ICACHE_ADDR CODE_MAX_SIZE  
+; Load image also contains compressed RW initializers.
+LR_IROM1 SCT_ICACHE_ADDR (CODE_MAX_SIZE + 0x00010000)
 { ; load region size_region
   ; I-Cache
   ER_IROM1 SCT_ICACHE_ADDR CODE_MAX_SIZE  

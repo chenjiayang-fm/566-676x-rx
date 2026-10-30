@@ -4770,7 +4770,7 @@ void UI_DrawDesktopIcon(void)
 	uint16_t uwLcd_VSize = uwLCD_GetLcdVoSize();
 	UI_CamViewType_t tUI_CamViewType = tCamViewSel.tCamViewType;
 	uint16_t uwCam1WordOsdIndex = (tUI_CuSetting.tLanguage != LANGUAGE_GERMAN)?OSD2IMG_DESKTOP_CAM1_WORD:OSD2IMG_DESKTOP_CAM1_WORD_GER;
-	if(ubDrawBSDRange == TRUE)
+	if(ubDrawBSDRange == TRUE && tUI_State == UI_DISPLAY_STATE)
 		UI_DrawBSDRange();
 	
 	tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_DESKTOP_VOICE_MUTE + 1 - tUI_CuSetting.ubMuteFlag, 1, &tVoiceOsdImgInfo);
@@ -4872,7 +4872,7 @@ void UI_DrawDesktopIcon(void)
 			tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_DESKTOP_LINE_QUAD_H, 1, &tOsdImgInfo);
 			tOSD_Img2(&tOsdImgInfo, OSD_QUEUE);
 			tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_DESKTOP_LINE_QUAD_V, 1, &tOsdImgInfo);
-			tOSD_Img2(&tOsdImgInfo, OSD_QUEUE);
+			tOSD_Img2(&tOsdImgInfo, OSD_UPDATE);
 			break;
 		default:
 			break;
@@ -4948,6 +4948,7 @@ void UI_SwitchViewType(UI_CamNum_t tUI_CamSel,uint8_t ubClosePanel)
 	{
 		ubUI_ReOpenPanel = TRUE;
 		UI_PanelOff();
+		UI_ClearOsdImage();
 	}
 	if(UI_REC_START == tUI_RecPlayAct.tRecAct)
 	{

@@ -668,8 +668,6 @@ void UI_SubKeyMenu(UI_ArrowKey_t tArrowKey)
 //			return;
 //		}
 		tUI_State = UI_MAINMENU_STATE;
-		UI_ClearOsdImageNoUpdate();
-		UI_DrawDesktopIcon();
 		UI_DrawMenuPage();
 		for(int i = 0; i < MENUITEM_MAX; i++)
 			memset(&tUI_SubMenuItem[i].tSubMenuInfo, 0, sizeof(UI_MenuItem_t));

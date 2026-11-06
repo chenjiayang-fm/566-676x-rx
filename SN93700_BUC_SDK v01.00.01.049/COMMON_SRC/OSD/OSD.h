@@ -596,6 +596,8 @@ void OSD_UpdateImg1AndImg2(void);
 	\endcode
 */
 OSD_RESULT tOSD_Img2 (OSD_IMG_INFO *pInfor, OSD_UPDATE_TYP tMode);
+void get_bmp_idx(OSD_IMG_INFO *tInfor);
+OSD_RESULT tOSD_Img2_DrawBox(OSD_IMG_INFO *pInfor, uint8_t alarm_type, OSD_UPDATE_TYP tMode);
 //------------------------------------------------------------------------------
 /*!
 	\brief 		Display Font OSD Function
@@ -805,6 +807,7 @@ void OSD_ResetOsdStart (uint8_t ubX, uint8_t ubY);
 void OSD_SetHDummyPixel(uint8_t ubDM_Size);
 uint16_t uwOSD_GetHDummyPixel(void);
 void OSD_UpdateImg2 (void);
+void OSD_UpdateImg2Buf(void);
 
 
 

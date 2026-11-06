@@ -171,6 +171,7 @@ void UI_HomeMenu_Key(UI_ArrowKey_t tArrowKey)
 void UI_DrawVolumeMenuPage(void)
 {
 	OSD_IMG_INFO tOsdImgInfo[4];
+	osSemaphoreWait(osUI_CuUiCtr, osWaitForever);
 	MenuOnFlag = TRUE;
 	tUI_State = UI_SET_VOLUME_STATE;
 	UI_ClearOsdImageNoUpdate();
@@ -206,6 +207,7 @@ void UI_DrawVolumeMenuPage(void)
 	else
 		UI_ShowButtonValueHighLight(tUI_CamStatus[UI_GetAudioSrc()].ubVolumeLvl,tOsdImgInfo[3].uwXStart + 4,tOsdImgInfo[3].uwYStart + 9,OSD_UPDATE);
 			
+	osSemaphoreRelease(osUI_CuUiCtr);
 }
 //------------------------------------------------------------------------------
 void UI_VolumeMenuDrawMenuItem(uint8_t ubPreVolumeLvl)

@@ -2156,6 +2156,9 @@ uint8_t KNL_GetRssiValue(KNL_ROLE tKNL_Role);
 uint8_t KNL_GetPerValue(KNL_ROLE tKNL_Role);
 uint32_t KNL_GetFrameCount(KNL_ROLE tKNL_Role);
 uint8_t KNL_GetFps(KNL_ROLE tKNL_Role);
+#if APP_HDW24G_RF_TEST && defined(RTC676x) && defined(OP_AP)
+uint32_t ulKNL_GetRxVdoBytes(KNL_ROLE tKNL_Role);
+#endif
 //------------------------------------------------------------------------
 /*!
 \brief Get H264 Encoder Index

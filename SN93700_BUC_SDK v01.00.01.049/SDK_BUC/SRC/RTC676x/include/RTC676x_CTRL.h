@@ -131,7 +131,11 @@ void RTC676x_DelId(uint8_t ubStaNum);
 
 #if OP_AP
 // 配对机型保存在 Flash；RAM 缓存算法结果及待刷新通道。
+#define HDW24G_MAX_OBJECTS 20
+#define HDW24G_RESULT_SIZE (18 + HDW24G_MAX_OBJECTS * 10)
 void RTC676x_Hdw24gInit(void);
+void RTC676x_SetHdw24gNotifyThread(osThreadId tThread);
+void RTC676x_SetHdw24gVisibleMask(uint8_t ubStaMask);
 void RTC676x_Hdw24gPoll(void);
 uint16_t RTC676x_GetHdw24gResult(uint8_t ubStaNum, uint8_t *pData, uint16_t uwSize);
 #endif

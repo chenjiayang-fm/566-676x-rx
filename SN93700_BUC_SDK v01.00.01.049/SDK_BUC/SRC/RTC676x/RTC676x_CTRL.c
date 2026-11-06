@@ -624,8 +624,6 @@ void RTC676x_CmdThread(void const *arg)
 }
 
 #if OP_AP
-#define HDW24G_MAX_OBJECTS 20
-#define HDW24G_RESULT_SIZE (18 + HDW24G_MAX_OBJECTS * 10)
 // 机型保存在配对 Flash；RAM 仅记录变化，用于刷新本通道和缓存算法结果。
 typedef struct
 {
@@ -638,6 +636,11 @@ typedef struct
 }RTC676x_Hdw24gState_t;
 static RTC676x_Hdw24gState_t tRTC676x_Hdw24g[4];
 static osMutexId osRTC676x_Hdw24gMutex;
+static osThreadId osRTC676x_Hdw24gNotifyThread;
+static uint8_t ubRTC676x_Hdw24gVisibleMask;
+// RF thread only updates counters; the status thread prints once per second.
+static volatile uint32_t ulRTC676x_Hdw24gRecvCount[4], ulRTC676x_Hdw24gSaveCount[4];
+static volatile uint16_t uwRTC676x_Hdw24gPacketLen[4];
 
 static uint32_t RTC676x_Hdw24gGet32(const uint8_t *pData)
 {
@@ -649,13 +652,35 @@ void RTC676x_Hdw24gInit(void)
 	osMutexDef(RTC676x_Hdw24gMutex);
 	osRTC676x_Hdw24gMutex = osMutexCreate(osMutex(RTC676x_Hdw24gMutex));
 }
+void RTC676x_SetHdw24gNotifyThread(osThreadId tThread)
+{
+	osRTC676x_Hdw24gNotifyThread = tThread;
+}
+void RTC676x_SetHdw24gVisibleMask(uint8_t ubStaMask)
+{
+	osMutexWait(osRTC676x_Hdw24gMutex, osWaitForever);
+	for(uint8_t sta = 0; sta < 4; sta++)
+	{
+		if((ubStaMask ^ ubRTC676x_Hdw24gVisibleMask) & (1 << sta))
+		{
+			// A newly visible CAM must wait for a fresh result rather than reuse its hidden cache.
+			tRTC676x_Hdw24g[sta].uwResultLen = 0;
+			tRTC676x_Hdw24g[sta].ubPrintValid = FALSE;
+		}
+	}
+	ubRTC676x_Hdw24gVisibleMask = ubStaMask;
+	osMutexRelease(osRTC676x_Hdw24gMutex);
+}
 uint16_t RTC676x_GetHdw24gResult(uint8_t ubStaNum, uint8_t *pData, uint16_t uwSize)
 {
 	uint16_t uwLen = 0;
 	if(ubStaNum > 3 || !osRTC676x_Hdw24gMutex)
 		return 0;
 	osMutexWait(osRTC676x_Hdw24gMutex, osWaitForever);
-	if(tRTC676x_Hdw24g[ubStaNum].ulId == ulKNL_GetSlaveId(ubStaNum) &&
+	if((ubRTC676x_Hdw24gVisibleMask & (1 << ubStaNum)) &&
+		!ubKNL_GetStopTrxFlg() && PAIR_IsHdw24gCam((PAIR_TAG)ubStaNum) &&
+		rf_get_link_status(ulKNL_GetSlaveId(ubStaNum)) &&
+		tRTC676x_Hdw24g[ubStaNum].ulId == ulKNL_GetSlaveId(ubStaNum) &&
 		(uint32_t)(osKernelSysTick() - tRTC676x_Hdw24g[ubStaNum].ulResultTick) <= osKernelSysTickFrequency)
 		uwLen = tRTC676x_Hdw24g[ubStaNum].uwResultLen;
 	if(uwLen > uwSize)
@@ -671,8 +696,13 @@ void RTC676x_Hdw24gPoll(void)
 	uint8_t ubSta, ubCamType, ubRefresh, ubPrint, ubResult[HDW24G_RESULT_SIZE];
 	uint16_t uwLen, uwIdx;
 	uint32_t ulId, ulTick = osKernelSysTick(), ulSeq;
+	static uint32_t ulRxPrintTick;
+	uint8_t ubPrintRx;
 	if(!osRTC676x_Hdw24gMutex || ubKNL_GetStopTrxFlg())
 		return;
+	ubPrintRx = (uint32_t)(ulTick - ulRxPrintTick) >= osKernelSysTickFrequency;
+	if(ubPrintRx)
+		ulRxPrintTick = ulTick;
 	for(ubSta = 0; ubSta < 4; ubSta++)
 	{
 		ulId = ulKNL_GetSlaveId(ubSta);
@@ -697,7 +727,7 @@ void RTC676x_Hdw24gPoll(void)
 		uwLen = pState->uwResultLen;
 		if(uwLen && (uint32_t)(ulTick - pState->ulResultTick) > osKernelSysTickFrequency)
 			pState->uwResultLen = uwLen = 0;
-		if(uwLen)
+		if(uwLen && ubPrintRx)
 		{
 			ulSeq = RTC676x_Hdw24gGet32(pState->ubResult + 8);
 			if(!pState->ubPrintValid || pState->ulPrintSeq != ulSeq || pState->ubPrintCount != pState->ubResult[5])
@@ -711,20 +741,24 @@ void RTC676x_Hdw24gPoll(void)
 		osMutexRelease(osRTC676x_Hdw24gMutex);
 		if(ubRefresh)
 			VDO_RefreshCamResolution(ubSta);
+		// if(ubPrintRx && (ulRTC676x_Hdw24gRecvCount[ubSta] || (ubCamType && rf_get_link_status(ulId))))
+			// printf("[HDW24G][ALG-RX] cam=%u id=%08X rx=%u saved=%u pkt_len=%u model=%u visible=%u\r\n",
+				// ubSta + 1, ulId, ulRTC676x_Hdw24gRecvCount[ubSta], ulRTC676x_Hdw24gSaveCount[ubSta],
+				// uwRTC676x_Hdw24gPacketLen[ubSta], ubCamType, !!(ubRTC676x_Hdw24gVisibleMask & (1 << ubSta)));
 		// 打印放在周期线程，RF 线程只校验和缓存，避免逐框日志阻塞视频收包。
-		if(ubPrint)
-		{
-			printf("[HDW24G][ALG] cam=%u id=%08X seq=%u count=%u base=%ux%u\r\n",
-				ubSta + 1, ulId, ulSeq, ubResult[5],
-				(uint16_t)ubResult[12] | ((uint16_t)ubResult[13] << 8),
-				(uint16_t)ubResult[14] | ((uint16_t)ubResult[15] << 8));
-			for(uwIdx = 16; uwIdx < uwLen - 2; uwIdx += 10)
-				printf("[HDW24G][BOX] type=%u x=%u y=%u w=%u h=%u\r\n", ubResult[uwIdx],
-					(uint16_t)ubResult[uwIdx + 2] | ((uint16_t)ubResult[uwIdx + 3] << 8),
-					(uint16_t)ubResult[uwIdx + 4] | ((uint16_t)ubResult[uwIdx + 5] << 8),
-					(uint16_t)ubResult[uwIdx + 6] | ((uint16_t)ubResult[uwIdx + 7] << 8),
-					(uint16_t)ubResult[uwIdx + 8] | ((uint16_t)ubResult[uwIdx + 9] << 8));
-		}
+		// if(ubPrint)
+		// {
+			// printf("[HDW24G][ALG] cam=%u id=%08X seq=%u count=%u base=%ux%u\r\n",
+				// ubSta + 1, ulId, ulSeq, ubResult[5],
+				// (uint16_t)ubResult[12] | ((uint16_t)ubResult[13] << 8),
+				// (uint16_t)ubResult[14] | ((uint16_t)ubResult[15] << 8));
+			// for(uwIdx = 16; uwIdx < uwLen - 2; uwIdx += 10)
+				// printf("[HDW24G][BOX] type=%u alarm=%u x=%u y=%u w=%u h=%u\r\n", ubResult[uwIdx], ubResult[uwIdx + 1],
+					// (uint16_t)ubResult[uwIdx + 2] | ((uint16_t)ubResult[uwIdx + 3] << 8),
+					// (uint16_t)ubResult[uwIdx + 4] | ((uint16_t)ubResult[uwIdx + 5] << 8),
+					// (uint16_t)ubResult[uwIdx + 6] | ((uint16_t)ubResult[uwIdx + 7] << 8),
+					// (uint16_t)ubResult[uwIdx + 8] | ((uint16_t)ubResult[uwIdx + 9] << 8));
+		// }
 	}
 }
 #endif
@@ -737,8 +771,12 @@ static void RTC676x_RecvHdw24gResult(uint8_t ubStaNum, const uint8_t *pPkt, uint
 	const uint8_t *pData = pPkt + PKT_HEADER_SZ;
 	uint16_t uwLen, uwSum = 0, uwIdx;
 	uint16_t uwBaseW, uwBaseH, uwX, uwY, uwW, uwH;
+	uint8_t ubChanged = FALSE;
 
-	if(!osRTC676x_Hdw24gMutex || uwPktLen < PKT_HEADER_SZ + 18)
+	ulRTC676x_Hdw24gRecvCount[ubStaNum]++;
+	uwRTC676x_Hdw24gPacketLen[ubStaNum] = uwPktLen;
+	if(!osRTC676x_Hdw24gMutex || uwPktLen < PKT_HEADER_SZ + 18 ||
+		!(ubRTC676x_Hdw24gVisibleMask & (1 << ubStaNum)))
 		return;
 	for(uwIdx = 0; uwIdx < PKT_ACTIVE_HEADER_SZ; uwIdx++)
 		uwSum += pPkt[uwIdx];
@@ -770,14 +808,20 @@ static void RTC676x_RecvHdw24gResult(uint8_t ubStaNum, const uint8_t *pPkt, uint
 	// 接收线程零等待获取缓存锁；只接收已配对并记录机型的 TX 结果。
 	if(osMutexWait(osRTC676x_Hdw24gMutex, 0) != osOK)
 		return;
-	if(PAIR_IsHdw24gCam((PAIR_TAG)ubStaNum) &&
+	if((ubRTC676x_Hdw24gVisibleMask & (1 << ubStaNum)) &&
+		PAIR_IsHdw24gCam((PAIR_TAG)ubStaNum) &&
 		tRTC676x_Hdw24g[ubStaNum].ulId == ulKNL_GetSlaveId(ubStaNum))
 	{
+		ubChanged = tRTC676x_Hdw24g[ubStaNum].uwResultLen != uwLen ||
+			memcmp(tRTC676x_Hdw24g[ubStaNum].ubResult, pData, uwLen) != 0;
 		memcpy(tRTC676x_Hdw24g[ubStaNum].ubResult, pData, uwLen);
 		tRTC676x_Hdw24g[ubStaNum].uwResultLen = uwLen;
 		tRTC676x_Hdw24g[ubStaNum].ulResultTick = osKernelSysTick();
+		ulRTC676x_Hdw24gSaveCount[ubStaNum]++;
 	}
 	osMutexRelease(osRTC676x_Hdw24gMutex);
+	if(ubChanged && osRTC676x_Hdw24gNotifyThread)
+		osSignalSet(osRTC676x_Hdw24gNotifyThread, 1 << ubStaNum);
 }
 #endif
 //------------------------------------------------------------------------------

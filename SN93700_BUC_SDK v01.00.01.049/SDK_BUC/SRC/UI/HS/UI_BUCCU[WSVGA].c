@@ -33,6 +33,7 @@
 #include "RTC676x_API.h"
 #ifdef RTC676x
 #include "RTC676x_CTRL.h"
+#include "UI_AlgCanvas.h"
 #endif
 
 #define osUI_SIGNALS	0x66
@@ -77,9 +78,6 @@ UI_State_t tUI_State;
 APP_State_t tUI_SyncAppState;
 UI_CamStatus_t tUI_CamStatus[CAM_4T];
 UI_CUSetting_t tUI_CuSetting;
-#ifdef RTC676x
-static uint8_t ubUI_Hdw24gAlgEnable[CAM_4T];
-#endif
 const static UI_MenuFuncPtr_t tUI_StateMap2MenuFunc[UI_STATE_MAX] =
 {
 	[UI_DISPLAY_STATE]				= UI_DisplayArrowKeyFunc,
@@ -310,6 +308,9 @@ uint8_t FootSwitchLock = FALSE; //脚踏是否触发跳转
 
 UI_CamNum_t DeskTopShowView;//DeskTop当前显示的画面，有了tUI_ViewNumSel之所以还需要该变量是因为tUI_ViewNumSel标记着当前选的view，不能变
 
+#ifdef RTC676x
+static uint8_t ubUI_NoSignalMask;
+#endif
 static uint8_t ubCamDiscCount[4] = {0};//用来计数每个tx丢失连接的次数，只有计数值达到设定的才会刷no signal
 
 UI_SdSts_t tUI_SdCardSts;
@@ -390,6 +391,7 @@ UI_RecPlayAct_t tUI_RecPlayAct;
 static uint8_t ubUI_VdoRecChkFlag;
 //! Functions Execute
 static void UI_FuncsExecuteThread(void const *argument);
+static void UI_DrawDesktopStatusIcon(void);
 osThreadId osUI_FuncsExecThdId;
 osMessageQId osUI_FuncsExecQue;
 osMessageQId osUI_FuncsFinExecQue;
@@ -808,8 +810,6 @@ void UI_OnInitDialog(void)
 								  ((VDO_DISP_TYPE == KNL_DISP_DUAL_C) || (VDO_DISP_TYPE == KNL_DISP_DUAL_U))?DUAL_VIEW:SINGLE_VIEW;
 	tCamViewSel.tCamViewPool[0] = ((VDO_DISP_TYPE == KNL_DISP_QUAD) || (VDO_DISP_TYPE == KNL_DISP_H))?CAM_4T:CAM1;
 	tCamViewSel.tCamViewPool[1] = ((VDO_DISP_TYPE == KNL_DISP_DUAL_C) || (VDO_DISP_TYPE == KNL_DISP_DUAL_U))?CAM2:NO_CAM;
-
-
 }
 
 static void UI_RecvCamHeatingStatusReport(TWC_TAG tRecv_StaNum, uint8_t *pTwc_Data);
@@ -830,6 +830,10 @@ void UI_StateReset(void)
 
 	osSemaphoreDef(UI_UpdateStatusCtr);
 	osUI_UpdateStatusCtr = osSemaphoreCreate(osSemaphore(UI_UpdateStatusCtr), 1);
+#ifdef RTC676x
+	osMutexDef(UI_AlgCanvasMutex);
+	osUI_AlgCanvasMutex = osMutexCreate(osMutex(UI_AlgCanvasMutex));
+#endif
 
 	osSemaphoreDef(UiOsdLdStsSem);
 	osUI_OsdLdStsUpdSem = osSemaphoreCreate(osSemaphore(UiOsdLdStsSem), 1); 
@@ -1242,7 +1246,13 @@ void UI_UpdateAppStatus(void *ptAppStsReport)
 				UI_VideoRecordingExec(UI_REC_START);
 			}
 			
+#ifdef RTC676x
+			osMutexWait(osUI_AlgCanvasMutex, osWaitForever);
+#endif
 			ubUI_FinishViewSwitch = TRUE;
+#ifdef RTC676x
+			osMutexRelease(osUI_AlgCanvasMutex);
+#endif
 			//printf("uwUI_ViewSwitchTime = %d\n",uwUI_ViewSwitchTime);
 			uwUI_ViewSwitchTime = 0;
 			//printf("ubUI_FinishViewSwitch\n");
@@ -1308,6 +1318,9 @@ void UI_UpdateAppStatus(void *ptAppStsReport)
 			UI_EnterStandby();
 		
 		ubUI_CuStartUpFlag = TRUE;
+#ifdef RTC676x
+		UI_AlgCanvasInit();
+#endif
 	}
 	osSemaphoreWait(osUI_CuSemId, osWaitForever);
 	tUI_CuSetting.IconSts.ubClearThdCntFlag = (tUI_SyncAppState == pAppStsRpt->tAPP_State)?FALSE:TRUE;
@@ -1537,11 +1550,21 @@ void UI_DrawNoSignalIcon(void)
 				ubCamDiscCount[tCamViewSel.tCamViewPool[ubCam]] = 0;
 				
 				tOSD_Img2(&tOsdImgInfo, OSD_UPDATE);
+#ifdef RTC676x
+				ubUI_NoSignalMask |= 1 << tCamViewSel.tCamViewPool[ubCam];
+#endif
 			}
 		}
 		else
 		{
 			ubCamDiscCount[tCamViewSel.tCamViewPool[ubCam]] = 0;
+#ifdef RTC676x
+			// Only erase a shown offline label; periodic erasing cuts through live AI boxes.
+			if(UI_AlgCanvasGetEnable(tCamViewSel.tCamViewPool[ubCam]) &&
+				!(ubUI_NoSignalMask & (1 << tCamViewSel.tCamViewPool[ubCam])))
+				continue;
+			ubUI_NoSignalMask &= ~(1 << tCamViewSel.tCamViewPool[ubCam]);
+#endif
 			if(tCamViewSel.tCamViewType == SINGLE_VIEW)
 			{
 				if(!tUI_CuSetting.ubIsEnableBSDRANGE[tCamViewSel.tCamViewPool[0]] &&
@@ -1602,6 +1625,8 @@ void UI_DrawSdCardInfoIcon(void)
 					printf("sd card not ready to access\n");
 					return;
 				}
+				MenuOnFlag = TRUE;
+				tUI_State = UI_SHOW_SDCARD_INFO_STATE;
 				UI_ClearOsdImageNoUpdate();
 				
 				if(ubUI_TouchPanelSts)
@@ -1613,9 +1638,7 @@ void UI_DrawSdCardInfoIcon(void)
 					tOSD_Img2(&tSdCardImgInfo[0], OSD_UPDATE);
 			
 				ubShowSdinfo = FALSE;
-				MenuOnFlag = TRUE;
 				ulMenuAutoOffCount = MENUAUTOOFFCOUNT;
-				tUI_State = UI_SHOW_SDCARD_INFO_STATE;
 			}
 		}
 		else
@@ -1763,6 +1786,14 @@ void UI_DrawTxVersion(void)
 	OSD_IMG_INFO tOsdImgInfo;
 	
 	osSemaphoreWait(osUI_CuUiCtr, osWaitForever);
+#ifdef RTC676x
+	osMutexWait(osUI_AlgCanvasMutex, osWaitForever);
+#endif
+	MenuOnFlag = TRUE;
+	tUI_State = UI_SHOW_TX_VERSION_STATE;
+#ifdef RTC676x
+	osMutexRelease(osUI_AlgCanvasMutex);
+#endif
 	tOSD_GetOsdImgInfor(1, OSD_IMG1, OSD1IMG_SUBMENU2, 1, &tOsdImgInfo);
 	tOSD_Img1(&tOsdImgInfo, OSD_QUEUE);
 	if(!ubUI_TouchPanelSts)
@@ -1776,8 +1807,6 @@ void UI_DrawTxVersion(void)
 		if(tUI_CamStatus[tCamNum].ulCAM_ID != INVALID_ID)
 			OSD_ImagePrintf(OSD_IMG_ROTATION_0, 430, 200 + tCamNum*50, tUI_CharOsdImgInfo, OSD_UPDATE, tUI_CamStatus[tCamNum].cCamVersion);
 	}
-	MenuOnFlag = TRUE;
-	tUI_State = UI_SHOW_TX_VERSION_STATE;
 	osSemaphoreRelease(osUI_CuUiCtr);
 }
 //------------------------------------------------------------------------------
@@ -2073,6 +2102,81 @@ void UI_DrawZoomInfoIcon(void)
 	tOSD_Img2(&tOsdImgInfo, OSD_UPDATE);
 }
 //------------------------------------------------------------------------------
+#if APP_HDW24G_RF_TEST && defined(RTC676x)
+// Sample each CAM once per second using the existing UI thread and view/OSD locks.
+static void UI_DrawHdw24gRfInfo(void)
+{
+	static uint32_t ulPrevious[CAM_4T], ulLastTick;
+	static uint8_t ubStarted;
+	uint32_t ulTick = osKernelSysTick(), ulElapsed = ulTick - ulLastTick;
+	uint32_t ulBytes, ulBitRate[CAM_4T], ulBw, ulLoss, ulCoef;
+	uint8_t ubSlots, ubCam, ubOnline;
+	APP_StaNumMap_t *pSta;
+	OSD_IMG_INFO tArea;
+
+	if(ubStarted && ulElapsed < osKernelSysTickFrequency)
+		return;
+	for(ubCam = CAM1; ubCam <= CAM4; ubCam++)
+	{
+		pSta = APP_GetSTANumMappingTable((UI_CamNum_t)ubCam);
+		ulBytes = ulKNL_GetRxVdoBytes(pSta->tKNL_StaNum);
+		ulBitRate[ubCam] = ubStarted ? (uint64_t)(uint32_t)(ulBytes - ulPrevious[ubCam]) * 8 * osKernelSysTickFrequency / ((uint64_t)ulElapsed * 1000) : 0;
+		ulPrevious[ubCam] = ulBytes;
+	}
+	ulLastTick = ulTick;
+	if(!ubStarted)
+	{
+		ubStarted = TRUE;
+		return;
+	}
+	osMutexWait(osUI_AlgCanvasMutex, osWaitForever);
+	if(tUI_State != UI_DISPLAY_STATE || ubUI_CuPowerDiscFlag || !ubUI_FinishViewSwitch)
+	{
+		osMutexRelease(osUI_AlgCanvasMutex);
+		return;
+	}
+	switch(tCamViewSel.tCamViewType)
+	{
+		case SINGLE_VIEW: ubSlots = 1; break;
+		case DUAL_VIEW: ubSlots = 2; break;
+		case QUAD_VIEW: ubSlots = 4; break;
+		default:
+			osMutexRelease(osUI_AlgCanvasMutex);
+			return;
+	}
+	// Keep the reference InfoDisplay BW-based estimate, expressed in 0.01 percent.
+	ulCoef = (ubSlots == 1)?2228:(ubSlots == 2)?4299:8598;
+	for(uint8_t slot = 0; slot < ubSlots; slot++)
+	{
+		ubCam = tCamViewSel.tCamViewPool[slot];
+		if(ubCam >= CAM_4T)
+			continue;
+		pSta = APP_GetSTANumMappingTable((UI_CamNum_t)ubCam);
+		ubOnline = tUI_CamStatus[ubCam].tCamConnSts == CAM_ONLINE && !ubKNL_GetStopTrxFlg();
+		ulBw = ubOnline ? ulKNL_GetTrxBwRpt(pSta->tKNL_StaNum) : 0;
+		ulLoss = ((uint64_t)ulBw * ulCoef >= 1000000)?0:10000 - ulBw * ulCoef / 100;
+		// BW reports KiB/s; show both BW and BR in decimal kbit/s.
+		ulBw = (uint64_t)ulBw * 8192 / 1000;
+		// Test all CAM channels; show FPS/BW/LOSS/BR in one column per display slot.
+		tArea.uwXStart = 12 + (slot % 2) * (OSD_WIDTH / 2);
+		tArea.uwYStart = 80 + (slot / 2) * (OSD_HEIGHT / 2);
+		tArea.uwHSize = 168;
+		tArea.uwVSize = 128;
+		OSD_EraserImg2_NoUpdate(&tArea);
+		OSD_ImagePrintf(OSD_IMG_ROTATION_0, tArea.uwXStart, tArea.uwYStart, tUI_CharOsdImgInfo, OSD_QUEUE,
+			ubOnline ? "FPS:%02u" : "FPS:--", ubOnline ? KNL_GetFps(pSta->tKNL_StaNum) : 0);
+		OSD_ImagePrintf(OSD_IMG_ROTATION_0, tArea.uwXStart, tArea.uwYStart + 32, tUI_CharOsdImgInfo, OSD_QUEUE,
+			ubOnline ? "BW:%04uKBS" : "BW:----KBS", ulBw);
+		// Existing fonts have no percent glyph; LOSS is a percentage, not measured packet loss.
+		OSD_ImagePrintf(OSD_IMG_ROTATION_0, tArea.uwXStart, tArea.uwYStart + 64, tUI_CharOsdImgInfo, OSD_QUEUE,
+			ubOnline ? "LOSS:%03u.%02u" : "LOSS:---.--", ulLoss / 100, ulLoss % 100);
+		OSD_ImagePrintf(OSD_IMG_ROTATION_0, tArea.uwXStart, tArea.uwYStart + 96, tUI_CharOsdImgInfo, OSD_UPDATE,
+			ubOnline ? "BR:%04uKBS" : "BR:----KBS", ulBitRate[ubCam]);
+	}
+	osMutexRelease(osUI_AlgCanvasMutex);
+}
+#endif
+//------------------------------------------------------------------------------
 void UI_UpdateStatus(uint16_t *pThreadCnt)
 {
 	if(!ubUI_CuStartUpFlag)
@@ -2091,6 +2195,20 @@ void UI_UpdateStatus(uint16_t *pThreadCnt)
 	{
 		if((*pThreadCnt % UI_UPDATESTS_PERIOD) == 0)
 		{
+#ifdef RTC676x
+			// Restore static icons on the status cycle, not on every AI result.
+			if(tUI_State == UI_DISPLAY_STATE)
+			{
+				for(uint8_t i = CAM1; i <= CAM4; i++)
+				{
+					if(UI_AlgCanvasGetEnable(i))
+					{
+						UI_DrawDesktopStatusIcon();
+						break;
+					}
+				}
+			}
+#endif
 			UI_DrawSignalInfoIcon();
 			if(tUI_State == UI_DISPLAY_STATE)
 				UI_DrawNoSignalIcon();
@@ -2106,10 +2224,7 @@ void UI_UpdateStatus(uint16_t *pThreadCnt)
 				}
 			}
 		}	
-		if((*pThreadCnt % UI_RECORDINGSTS_PERIOD) == 0)
-		{
-			UI_ShowRecordingStatus();
-		}
+		UI_ShowRecordingStatus();
 	
 	}
 	UI_UpdateRecStsIcon();
@@ -2119,6 +2234,9 @@ void UI_UpdateStatus(uint16_t *pThreadCnt)
 	{
 		UI_ShowPlayTime(ulPLY_GetSchedule(),ulPLY_GetTotalPlayTime(),830,515);
 	}
+#if APP_HDW24G_RF_TEST && defined(RTC676x)
+	UI_DrawHdw24gRfInfo();
+#endif
 	osSemaphoreRelease(osUI_CuUiCtr);
 		
 	//自动背光
@@ -2442,6 +2560,11 @@ APP_EventMsg_t *tUI_ViewTypeSetup(UI_CamViewType_t *tViewType)
 //------------------------------------------------------------------------------
 void UI_ClearOsdImage(void)
 {
+#ifdef RTC676x
+	osMutexWait(osUI_AlgCanvasMutex, osWaitForever);
+	UI_AlgCanvasReset();
+	ubUI_NoSignalMask = 0;
+#endif
 	OSD_IMG_INFO tOsdImgInfo;
 
 	tOsdImgInfo.uwHSize  = uwOSD_GetHSize();
@@ -2449,10 +2572,18 @@ void UI_ClearOsdImage(void)
 	tOsdImgInfo.uwXStart = 0;
 	tOsdImgInfo.uwYStart = 0;
 	OSD_EraserImg1(&tOsdImgInfo);
+#ifdef RTC676x
+	osMutexRelease(osUI_AlgCanvasMutex);
+#endif
 }
 //------------------------------------------------------------------------------
 void UI_ClearOsdImageNoUpdate(void)
 {
+#ifdef RTC676x
+	osMutexWait(osUI_AlgCanvasMutex, osWaitForever);
+	UI_AlgCanvasReset();
+	ubUI_NoSignalMask = 0;
+#endif
 	OSD_IMG_INFO tOsdImgInfo;
 
 	tOsdImgInfo.uwHSize  = uwOSD_GetHSize();
@@ -2460,6 +2591,9 @@ void UI_ClearOsdImageNoUpdate(void)
 	tOsdImgInfo.uwXStart = 0;
 	tOsdImgInfo.uwYStart = 0;
 	OSD_EraserImg1_NOUpdate(&tOsdImgInfo);
+#ifdef RTC676x
+	osMutexRelease(osUI_AlgCanvasMutex);
+#endif
 }
 //------------------------------------------------------------------------------
 void UI_PowerKey(void)
@@ -3294,7 +3428,7 @@ void UI_ReportCamConnectionStatus(void *pvConnectionSts)
 #ifdef RTC676x
 		if(tUI_CamStatus[tCamNum].tCamConnSts == CAM_OFFLINE)
 		{
-			ubUI_Hdw24gAlgEnable[tCamNum] = FALSE;
+			UI_AlgCanvasSetEnable(tCamNum, FALSE);
 			PAIR_ClearHdw24gConfig(APP_GetSTANumMappingTable(tCamNum)->tPAIR_StaNum);
 		}
 #endif
@@ -3443,7 +3577,7 @@ void UI_UnBindCam(UI_CamNum_t tUI_DelCam)
 	tUI_CamStatus[tUI_DelCam].tCamConnSts = CAM_OFFLINE;
 	tUI_CamStatus[tUI_DelCam].cCamVersion[0] = '\0';
 #ifdef RTC676x
-	ubUI_Hdw24gAlgEnable[tUI_DelCam] = FALSE;
+	UI_AlgCanvasSetEnable(tUI_DelCam, FALSE);
 	PAIR_ClearHdw24gConfig(APP_GetSTANumMappingTable(tUI_DelCam)->tPAIR_StaNum);
 #endif
 	tUI_CuSetting.ubPairedCamNum -= (tUI_CuSetting.ubPairedCamNum == 0)?0:1;
@@ -3724,7 +3858,7 @@ void UI_RecvTxVersion (TWC_TAG tRecv_StaNum, uint8_t *pData)
 	APP_TwcTagMap2CamNum(tRecv_StaNum, tCamNum);
 	if(tCamNum < CAM_4T)
 	{
-		ubUI_Hdw24gAlgEnable[tCamNum] = ubAlgEnable;
+		UI_AlgCanvasSetEnable(tCamNum, ubAlgEnable);
 		if(ubAlgEnable || PAIR_IsHdw24gCam(APP_GetSTANumMappingTable(tCamNum)->tPAIR_StaNum) ||
 			(pData[0] >= sizeof("HDW24G-") && pData[0] <= 31 && !pData[pData[0]] &&
 			 !memcmp(pData + 1, "HDW24G-", sizeof("HDW24G-") - 1)))
@@ -4599,7 +4733,7 @@ void UI_UpdateDevStatusInfo(void)
 #ifdef RTC676x
 	for(UI_CamNum_t tCamNum = CAM1;tCamNum < CAM_4T;tCamNum++)
 	{
-		if(ubUI_Hdw24gAlgEnable[tCamNum] && tUI_CamStatus[tCamNum].tCamConnSts == CAM_ONLINE &&
+		if(UI_AlgCanvasGetEnable(tCamNum) && tUI_CamStatus[tCamNum].tCamConnSts == CAM_ONLINE &&
 			PAIR_IsHdw24gCam(APP_GetSTANumMappingTable(tCamNum)->tPAIR_StaNum))
 			UI_SendHdw24gCursor(tCamNum, TRUE);
 	}
@@ -4765,13 +4899,18 @@ static void UI_DrawBSDRange(void)
 //------------------------------------------------------------------------------
 void UI_DrawDesktopIcon(void)
 {
+	if(ubDrawBSDRange == TRUE && tUI_State == UI_DISPLAY_STATE)
+		UI_DrawBSDRange();
+	UI_DrawDesktopStatusIcon();
+}
+
+static void UI_DrawDesktopStatusIcon(void)
+{
 	OSD_IMG_INFO tOsdImgInfo,tVoiceOsdImgInfo;
 	uint16_t uwLcd_HSize = uwLCD_GetLcdHoSize();
 	uint16_t uwLcd_VSize = uwLCD_GetLcdVoSize();
 	UI_CamViewType_t tUI_CamViewType = tCamViewSel.tCamViewType;
 	uint16_t uwCam1WordOsdIndex = (tUI_CuSetting.tLanguage != LANGUAGE_GERMAN)?OSD2IMG_DESKTOP_CAM1_WORD:OSD2IMG_DESKTOP_CAM1_WORD_GER;
-	if(ubDrawBSDRange == TRUE && tUI_State == UI_DISPLAY_STATE)
-		UI_DrawBSDRange();
 	
 	tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_DESKTOP_VOICE_MUTE + 1 - tUI_CuSetting.ubMuteFlag, 1, &tVoiceOsdImgInfo);
 	switch(tUI_CamViewType)
@@ -4942,7 +5081,14 @@ void UI_SwitchViewType(UI_CamNum_t tUI_CamSel,uint8_t ubClosePanel)
 		osSemaphoreWait(osUI_CuTriggerCtr, osWaitForever);
 	}
 	//printf("UI_SwitchViewType tUI_CamSel = %d\n",tUI_CamSel);
+#ifdef RTC676x
+	// Drain the old canvas before changing the display mapping.
+	osMutexWait(osUI_AlgCanvasMutex, osWaitForever);
+#endif
 	ubUI_FinishViewSwitch = FALSE;
+#ifdef RTC676x
+	osMutexRelease(osUI_AlgCanvasMutex);
+#endif
 	UI_CamViewType_t tCamViewTypeSel;
 	if(ubClosePanel)
 	{
@@ -6325,21 +6471,31 @@ void UI_ShowRecordingStatus(void)
 	OSD_IMG_INFO tOsdImgInfo[3];
 	tOSD_GetOsdImgInfor(1, OSD_IMG2, OSD2IMG_RECORDING_BLACK_ICON, 3, &tOsdImgInfo[0]);
 	static uint8_t ubImgIdx = 0;
+	static uint32_t ulBlinkTick;
+	uint32_t ulTick = osKernelSysTick();
+	uint32_t ulBlinkPeriod = 600 * osKernelSysTickFrequency / 1000;
 	if(UI_REC_START == tUI_RecPlayAct.tRecAct)
 	{
 		if(tUI_SyncAppState == APP_LINK_STATE)
 		{
-			ubImgIdx = 1 - ubImgIdx;
+			if((uint32_t)(ulTick - ulBlinkTick) >= ulBlinkPeriod)
+			{
+				uint32_t ulFlipCount = (uint32_t)(ulTick - ulBlinkTick) / ulBlinkPeriod;
+				ubImgIdx ^= ulFlipCount & 1;
+				ulBlinkTick += ulFlipCount * ulBlinkPeriod;
+			}
 			tOSD_Img2(&tOsdImgInfo[ubImgIdx], OSD_UPDATE);
 		}
 		else
 		{
+			ulBlinkTick = ulTick;
 			tOSD_Img2(&tOsdImgInfo[2], OSD_UPDATE);
 		}
 	}
 	else
 	{	
 		ubImgIdx = 0;
+		ulBlinkTick = ulTick;
 		UI_ClearRecordStatusOsdImg();
 	}
 
@@ -7401,10 +7557,16 @@ void UI_EnterAdjustZoomArea(void)
 	storeAIarea();
 
 	tOSD_GetOsdImgInfor(1, OSD_IMG1, OSD1IMG_SUBMENU2, 1, &tEraserOsdImgInfo);
-	OSD_EraserImg1(&tEraserOsdImgInfo);
-
+#ifdef RTC676x
+	osMutexWait(osUI_AlgCanvasMutex, osWaitForever);
+#endif
 	tUI_State = UI_ADJUST_ZOOM_AREA_STATE;
 	MenuOnFlag = TRUE;
+#ifdef RTC676x
+	osMutexRelease(osUI_AlgCanvasMutex);
+#endif
+	OSD_EraserImg1(&tEraserOsdImgInfo);
+
 
 	tZoomSettingCameraItem.tSubMenuInfo.ubItemIdx = ZOOM_TRACE_CALIBRATE;
 
@@ -7453,10 +7615,16 @@ void UI_EnterAdjustZoomBSDArea(void)
 	uint8_t CAM = tUI_SubMenuItem[ZOOM_ITEM].tSubMenuInfo.ubItemIdx;
 
 	tOSD_GetOsdImgInfor(1, OSD_IMG1, OSD1IMG_SUBMENU2, 1, &tEraserOsdImgInfo);
-	OSD_EraserImg1(&tEraserOsdImgInfo);
-
+#ifdef RTC676x
+	osMutexWait(osUI_AlgCanvasMutex, osWaitForever);
+#endif
 	tUI_State = UI_ADJUST_ZOOM_BSD_AREA_STATE;
 	MenuOnFlag = TRUE;
+#ifdef RTC676x
+	osMutexRelease(osUI_AlgCanvasMutex);
+#endif
+	OSD_EraserImg1(&tEraserOsdImgInfo);
+
 	tZoomSettingCameraItem.tSubMenuInfo.ubItemIdx = ZOOM_BSD_CALIBRATE;
 
 	//设置为选中左边框

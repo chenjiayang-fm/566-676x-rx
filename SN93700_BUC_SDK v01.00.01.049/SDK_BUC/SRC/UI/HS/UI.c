@@ -52,7 +52,11 @@ void UI_Init(osMessageQId *pvMsgQId)
 	PDET_Init();
 #endif
 	UI_1MSTimerInit();
+#if defined(BSP_D_SNCC71_GM8285C_RX_V2) && defined(RTC676x)
+	osThreadDef(UI_EventThread, UI_EventThread, osPriorityAboveNormal, 1, THREAD_STACK_UIEVENT_HANDLER);
+#else
 	osThreadDef(UI_EventThread, UI_EventThread, THREAD_PRIO_UIEVENT_HANDLER, 1, THREAD_STACK_UIEVENT_HANDLER);
+#endif
 	osThreadCreate(osThread(UI_EventThread), NULL);
 	KNL_SetBbFrmMonitCbFunc(UI_FrameTRXFinish);
 }

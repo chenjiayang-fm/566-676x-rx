@@ -1566,6 +1566,10 @@ void UI_DrawParkingLine(uint8_t ubCamNum,OSD_UPDATE_TYP tMode);
 void UI_EraseParkingLine(uint8_t ubCamNum,OSD_UPDATE_TYP tMode);
 void UI_AIDrawRangeLines(UI_LinePoint_t tLinePoint[4][2], OSD_LAYER_TYP tOsdLayer);
 void UI_DrawDesktopIcon(void);
+void UI_DrawSignalInfoIcon(void);
+void UI_DrawNoSignalIcon(void);
+void UI_DrawTxBatteryHeatingInfoIcon(void);
+void UI_DrawZoomInfoIcon(void);
 void UI_ResetUIParameter(void);
 uint8_t UI_UpdateBSDAndTraceCtrl(UI_CamNum_t tCamNum);
 uint8_t UI_UpdateLaserAndLedCtrl(UI_CamNum_t tCamNum);
@@ -1699,6 +1703,7 @@ extern uint8_t ubDrawBSDRange;
 extern UI_CamNum_t TriggerBackUp_View;
 extern osSemaphoreId osUI_CuTriggerCtr;
 extern osSemaphoreId osUI_CuUiCtr;
+extern osSemaphoreId osUI_UpdateStatusCtr;
 
 extern uint8_t ubUI_TouchPanelSts;
 

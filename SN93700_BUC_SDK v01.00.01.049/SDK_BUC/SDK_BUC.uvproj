@@ -654,6 +654,11 @@
               <FileType>1</FileType>
               <FilePath>.\SRC\UI\HS\UI_BUCCU[WSVGA]_SUBSUBSUBSUBMENU.c</FilePath>
             </File>
+            <File>
+              <FileName>UI_AlgCanvas.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\SRC\UI\HS\UI_AlgCanvas.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -2327,6 +2332,11 @@
               <FileName>UI_BUCCU[WSVGA]_SUBSUBSUBSUBMENU.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\SRC\UI\HS\UI_BUCCU[WSVGA]_SUBSUBSUBSUBMENU.c</FilePath>
+            </File>
+            <File>
+              <FileName>UI_AlgCanvas.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\SRC\UI\HS\UI_AlgCanvas.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -4018,6 +4028,11 @@
               <FileType>1</FileType>
               <FilePath>.\SRC\UI\HS\UI_BUCCU[WSVGA]_SUBSUBSUBSUBMENU.c</FilePath>
             </File>
+            <File>
+              <FileName>UI_AlgCanvas.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\SRC\UI\HS\UI_AlgCanvas.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -5692,6 +5707,11 @@
               <FileName>UI_BUCCU[WSVGA]_SUBSUBSUBSUBMENU.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\SRC\UI\HS\UI_BUCCU[WSVGA]_SUBSUBSUBSUBMENU.c</FilePath>
+            </File>
+            <File>
+              <FileName>UI_AlgCanvas.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\SRC\UI\HS\UI_AlgCanvas.c</FilePath>
             </File>
           </Files>
         </Group>

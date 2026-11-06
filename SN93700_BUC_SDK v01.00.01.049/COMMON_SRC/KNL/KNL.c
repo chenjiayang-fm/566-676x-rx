@@ -540,6 +540,10 @@ uint8_t ubKNL_CodecFailFlg[4] = {0,0,0,0};
 uint8_t ubKNL_OutFps[4] = {0,0,0,0};
 uint8_t ubKNL_OutFpsTemp[4] = {0,0,0,0};
 uint32_t ulKNL_FrameCount[4] = {0,0,0,0};
+#if APP_HDW24G_RF_TEST && defined(RTC676x) && defined(OP_AP)
+// Cumulative accepted video bytes; the UI samples deltas without resetting RF counters.
+static volatile uint32_t ulKNL_RxVdoBytes[4];
+#endif
 
 uint8_t ubPkt_AckStatus[KNL_ACK_STATIC_NUM];
 uint32_t ulPkt_MonitIdx = 0;
@@ -23657,6 +23661,9 @@ KNL_SRC tKNL_RxVdoInProcess(uint8_t ubSta, uint32_t ulVdoAddr, uint32_t ulVdoSiz
 						{
 							if(tKNL_GetPlyMode() == KNL_NORMAL_PLY)
 							{
+#if APP_HDW24G_RF_TEST && defined(RTC676x) && defined(OP_AP)
+								ulKNL_RxVdoBytes[ubSrcNumMap] += ulVdoSize;
+#endif
 								tKNLInfo.ulDramAddr2    = ulVdoBsAddr;
 								tKNLInfo.ubCurNode      = KNL_NODE_COMM_RX_VDO;
 								tKNLInfo.ubNextNode     = ubKNL_GetNextNode(ubSrcNum,KNL_NODE_COMM_RX_VDO);
@@ -27112,6 +27119,12 @@ uint8_t KNL_GetFps(KNL_ROLE tKNL_Role)
 {
 	return ubKNL_OutFps[tKNL_Role];
 }
+#if APP_HDW24G_RF_TEST && defined(RTC676x) && defined(OP_AP)
+uint32_t ulKNL_GetRxVdoBytes(KNL_ROLE tKNL_Role)
+{
+	return ulKNL_RxVdoBytes[tKNL_Role];
+}
+#endif
 //------------------------------------------------------------------------------
 #if (defined(RTC676x) && TRXBW_RPT_EN)
 #ifdef OP_AP

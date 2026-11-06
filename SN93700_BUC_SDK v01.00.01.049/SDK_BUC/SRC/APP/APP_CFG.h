@@ -21,6 +21,11 @@
 #include <stdint.h>
 #include "bsp_config.h"
 
+// HDW24G FPS/BW/Loss/BR test overlay: set to 0 for normal firmware.
+#ifndef APP_HDW24G_RF_TEST
+#define APP_HDW24G_RF_TEST			1
+#endif
+
 //------------------------------------------------------------------------------
 //!Thread Priority Setting
 #ifdef RTC676x
